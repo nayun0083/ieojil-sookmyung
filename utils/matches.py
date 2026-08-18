@@ -1,14 +1,27 @@
 from utils.supabase_client import get_client
 
 
-def create_match_request(mentor_id: str, mentee_id: str, result_type: str):
+def create_match_request(
+    mentor_id: str,
+    mentee_id: str,
+    mentor_profile_id: str,
+    result_type: str,
+    topic: str,
+    question: str,
+    preferred_time: str
+):
     """멘티가 멘토에게 매칭 신청"""
+
     sb = get_client()
 
     res = sb.table("matches").insert({
         "mentor_id": mentor_id,
         "mentee_id": mentee_id,
+        "mentor_profile_id": mentor_profile_id,
         "result_type": result_type,
+        "topic": topic,
+        "question": question,
+        "preferred_time": preferred_time,
         "status": "pending",
     }).execute()
 
@@ -17,11 +30,15 @@ def create_match_request(mentor_id: str, mentee_id: str, result_type: str):
 
 def get_pending_requests_for_mentor(mentor_id: str):
     """멘토가 받은 매칭 신청 목록"""
+
     sb = get_client()
 
     res = (
         sb.table("matches")
-        .select("id, result_type, status, created_at, mentee:profiles!matches_mentee_id_fkey(name, dept, grade)")
+        .select(
+            "id, result_type, status, created_at, "
+            "mentee:profiles!matches_mentee_id_fkey(name, dept, grade)"
+        )
         .eq("mentor_id", mentor_id)
         .eq("status", "pending")
         .order("created_at", desc=True)
@@ -33,6 +50,7 @@ def get_pending_requests_for_mentor(mentor_id: str):
 
 def accept_match(match_id: str):
     """멘토가 매칭 신청 수락"""
+
     sb = get_client()
 
     match_res = (
