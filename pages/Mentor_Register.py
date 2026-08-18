@@ -199,24 +199,31 @@ with st.form("mentor_register_form"):
         help="후배에게 도움을 줄 수 있는 분야를 선택해주세요."
     )
 
+    mentor_type_options = ["선택해주세요"] + list(TYPE_DESCRIPTIONS.keys())
+
     mentor_type = st.selectbox(
         "어떤 유형의 후배와 잘 맞나요?",
-        list(TYPE_DESCRIPTIONS.keys())
+        mentor_type_options
     )
-
-    with st.container(border=True):
-        st.markdown(f"**{mentor_type} 유형 설명**")
-        st.write(TYPE_DESCRIPTIONS[mentor_type])
-
-    available_time = st.selectbox(
-        "주로 가능한 시간",
-        [
-            "평일",
-            "주말",
-            "저녁",
-            "상관없음",
-        ]
-    )
+    
+    if mentor_type != "선택해주세요":
+        with st.container(border=True):
+            st.markdown(f"**{mentor_type} 유형 설명**")
+            st.write(TYPE_DESCRIPTIONS[mentor_type])
+    
+        with st.container(border=True):
+            st.markdown(f"**{mentor_type} 유형 설명**")
+            st.write(TYPE_DESCRIPTIONS[mentor_type])
+    
+        available_time = st.selectbox(
+            "주로 가능한 시간",
+            [
+                "평일",
+                "주말",
+                "저녁",
+                "상관없음",
+            ]
+        )
 
     message = st.text_input(
         "한 줄 메시지",
@@ -258,6 +265,10 @@ if submitted:
 
     if not intro.strip():
         st.warning("멘토 소개를 입력해주세요.")
+        st.stop()
+
+    if mentor_type == "선택해주세요":
+        st.warning("추천 후배 유형을 선택해주세요.")
         st.stop()
 
     mentor_profile = {
