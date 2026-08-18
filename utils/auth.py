@@ -47,14 +47,6 @@ def sign_up(name, email, password, dept, grade, role=None):
         if user is None:
             return None, "회원가입에 실패했습니다. 다시 시도해주세요."
 
-        # 2. profiles 테이블에 회원정보 저장
-        profile = upsert_profile(
-            user_id=user.id,
-            email=email,
-            name=name,
-            dept=dept,
-            grade=grade,
-        )
 
         return profile, None
 
