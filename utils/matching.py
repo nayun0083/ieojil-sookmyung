@@ -1,3 +1,5 @@
+from utils.supabase_client import get_client
+
 """매칭 로직: 답변 딕셔너리 → 유형/설명/추천멘토 반환"""
 
 TYPE_INFO = {
@@ -105,23 +107,83 @@ def calculate_scores(answers: dict) -> dict:
 
 
 def get_matching_result(answers: dict) -> dict:
+
     scores = calculate_scores(answers)
+
     max_score = max(scores.values())
-    top = [t for t, s in scores.items() if s == max_score]
+
+    top = [
+        t for t, s in scores.items()
+        if s == max_score
+    ]
 
     if len(top) == 1:
+
         result_type = top[0]
+
     else:
+
         # 동점 → Q4 성향 우선
-        result_type = TIE_BREAK.get(answers.get("q4"), top[0])
+        result_type = TIE_BREAK.get(
+            answers.get("q4"),
+            top[0]
+        )
+
         if result_type not in top:
             result_type = top[0]
 
+
     info = TYPE_INFO[result_type]
+
+
+    # --------------------------------
+    # 실제 멘토 프로필 조회
+    # --------------------------------
+
+    sb = get_client()
+
+    res = (
+        sb.table("mentor_profiles")
+        .select("*")
+        .eq("type", result_type)
+        .limit(1)
+        .execute()
+    )
+
+
+    # DB에서 멘토를 찾은 경우
+    if res.data:
+
+        db_mentor = res.data[0]
+
+        mentor = {
+            "id": db_mentor["id"],
+            "user_id": db_mentor["user_id"],
+            "name": db_mentor["name"],
+            "dept": db_mentor["dept"],
+            "sid": db_mentor["grade"],
+            "field": db_mentor["field"],
+            "email": db_mentor.get("email", ""),
+            "available_time": db_mentor.get(
+                "available_time",
+                ""
+            ),
+            "intro": db_mentor.get(
+                "intro",
+                ""
+            ),
+        }
+
+    # DB에 멘토가 없는 경우
+    else:
+
+        mentor = info["mentor"]
+
+
     return {
         "type": result_type,
         "title": info["title"],
         "desc": info["desc"],
-        "mentor": info["mentor"],
+        "mentor": mentor,
         "scores": scores,
     }
