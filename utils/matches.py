@@ -36,8 +36,10 @@ def get_pending_requests_for_mentor(mentor_id: str):
     res = (
         sb.table("matches")
         .select(
-            "id, result_type, status, created_at, "
-            "mentee:profiles!matches_mentee_id_fkey(name, dept, grade)"
+            "id, result_type, topic, question, "
+            "preferred_time, status, created_at, "
+            "mentee:profiles!matches_mentee_id_fkey("
+            "name, dept, grade)"
         )
         .eq("mentor_id", mentor_id)
         .eq("status", "pending")
