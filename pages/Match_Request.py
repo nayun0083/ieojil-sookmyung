@@ -77,4 +77,21 @@ contact_value = st.text_input(
 )
 
 if st.button("신청서 확인"):
-    st.success("신청서 입력 화면이 정상적으로 작동합니다.")
+    if not topics:
+        st.error("희망 분야를 하나 이상 선택해주세요.")
+    elif not preferred_time:
+        st.error("활동 가능 시간을 하나 이상 선택해주세요.")
+    elif not introduction.strip():
+        st.error("자기소개를 입력해주세요.")
+    elif not contact_value.strip():
+        st.error("연락처를 입력해주세요.")
+    else:
+        st.success("신청서 입력 화면이 정상적으로 작동합니다.")
+
+        st.write("선택한 역할:", role)
+        st.write("희망 분야:", ", ".join(topics))
+        st.write("활동 가능 시간:", ", ".join(preferred_time))
+        st.write("활동 방식:", activity_type)
+        st.write("자기소개:", introduction)
+        st.write("연락처 종류:", contact_type)
+        st.write("연락처:", contact_value)
