@@ -1,19 +1,26 @@
 """인증 로직 - 숙명여대 이메일 전용 회원가입/로그인/가드"""
 
 import streamlit as st
+
 from utils.supabase_client import get_client
+from utils.profile_db import upsert_profile, get_profile
+
 
 ALLOWED_DOMAIN = "@sookmyung.ac.kr"
 
 
 def is_sookmyung_email(email: str) -> bool:
-    """숙명여대 학교 이메일인지 검증"""
     return email.strip().lower().endswith(ALLOWED_DOMAIN)
 
 
-def sign_up(name, email, password, dept, grade):
-    """회원가입: Supabase Auth 계정 생성 + profiles 테이블 저장"""
+def sign_up(name, email, password, dept, grade, role=None):
+    """
+    회원가입
+    1. Supabase Auth에 계정 생성
+    2. profiles 테이블에 회원 기본 정보 저장
 
+    role은 예전 코드와 호환하려고 받기만 하고 사용하지 않음
+    """
     email = email.strip().lower()
 
     if not is_sookmyung_email(email):
@@ -22,7 +29,7 @@ def sign_up(name, email, password, dept, grade):
     sb = get_client()
 
     try:
-        # 1. Supabase Auth 계정 생성
+        # 1. Supabase Auth 회원가입
         res = sb.auth.sign_up({
             "email": email,
             "password": password,
@@ -31,7 +38,6 @@ def sign_up(name, email, password, dept, grade):
                     "name": name,
                     "dept": dept,
                     "grade": grade,
-                    "role": "사용자"
                 }
             },
         })
@@ -41,17 +47,16 @@ def sign_up(name, email, password, dept, grade):
         if user is None:
             return None, "회원가입에 실패했습니다. 다시 시도해주세요."
 
-        # 2. profiles 테이블에 사용자 정보 저장
-        sb.table("profiles").upsert({
-            "id": user.id,
-            "name": name,
-            "email": email,
-            "dept": dept,
-            "grade": grade,
-            "role": "사용자",
-        }).execute()
+        # 2. profiles 테이블에 회원정보 저장
+        profile = upsert_profile(
+            user_id=user.id,
+            email=email,
+            name=name,
+            dept=dept,
+            grade=grade,
+        )
 
-        return user, None
+        return profile, None
 
     except Exception as e:
         msg = str(e)
@@ -63,8 +68,12 @@ def sign_up(name, email, password, dept, grade):
 
 
 def sign_in(email, password):
-    """로그인: 도메인 검증 후 인증, 프로필 조회"""
-
+    """
+    로그인
+    1. Supabase Auth 로그인
+    2. profiles 테이블에서 내 정보 조회
+    3. session_state.current_user에 저장
+    """
     email = email.strip().lower()
 
     if not is_sookmyung_email(email):
@@ -79,26 +88,30 @@ def sign_in(email, password):
             "password": password,
         })
 
-        if res.user is None:
+        user = res.user
+
+        if user is None:
             return None, "이메일 또는 비밀번호가 올바르지 않습니다."
 
-        # 2. profiles 테이블에서 사용자 정보 조회
-        profile = (
-            sb.table("profiles")
-            .select("*")
-            .eq("id", res.user.id)
-            .single()
-            .execute()
-        )
+        # 2. profiles에서 회원정보 가져오기
+        profile = get_profile(user.id)
 
-        user_info = profile.data or {
-            "id": res.user.id,
-            "email": email,
-        }
+        # 혹시 profiles에 정보가 없으면 metadata로 다시 생성
+        if profile is None:
+            metadata = user.user_metadata or {}
 
-        st.session_state.current_user = user_info
+            profile = upsert_profile(
+                user_id=user.id,
+                email=email,
+                name=metadata.get("name", "사용자"),
+                dept=metadata.get("dept", "-"),
+                grade=metadata.get("grade", "-"),
+            )
 
-        return user_info, None
+        # 3. 로그인한 사용자 정보를 session_state에 저장
+        st.session_state.current_user = profile
+
+        return profile, None
 
     except Exception as e:
         msg = str(e)
@@ -113,8 +126,6 @@ def sign_in(email, password):
 
 
 def sign_out():
-    """로그아웃"""
-
     try:
         get_client().auth.sign_out()
     except Exception:
@@ -124,18 +135,14 @@ def sign_out():
 
 
 def get_current_user():
-    """현재 로그인한 사용자 정보 반환"""
     return st.session_state.get("current_user")
 
 
 def is_logged_in() -> bool:
-    """로그인 여부 확인"""
     return st.session_state.get("current_user") is not None
 
 
 def require_login():
-    """보호된 페이지 상단에서 호출. 미로그인 시 로그인 페이지 안내"""
-
     if not is_logged_in():
         st.warning("🔒 로그인이 필요한 기능입니다.")
         st.info("로그인 페이지로 이동해주세요.")
