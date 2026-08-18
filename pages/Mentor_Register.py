@@ -4,6 +4,7 @@ from components.header import render_header
 from components.footer import render_footer
 from utils.auth import require_login, get_current_user
 from utils.supabase_client import get_client
+from utils.mentor_db import save_mentor_profile, get_mentor_profile_by_user
 
 
 st.set_page_config(
@@ -101,6 +102,20 @@ TYPE_DESCRIPTIONS = {
 st.session_state.setdefault("mentor_profile", None)
 st.session_state.setdefault("mentor_profiles", [])
 
+# -----------------------------
+# DB에 저장된 기존 멘토 정보 불러오기
+# -----------------------------
+existing_mentor_profile = None
+
+if user.get("id"):
+    existing_mentor_profile = get_mentor_profile_by_user(user["id"])
+
+if existing_mentor_profile:
+    existing_mentor_profile["type_description"] = TYPE_DESCRIPTIONS.get(
+        existing_mentor_profile.get("type"),
+        ""
+    )
+    st.session_state.mentor_profile = existing_mentor_profile
 
 # -----------------------------
 # 화면 시작
@@ -246,33 +261,56 @@ if submitted:
         st.stop()
 
     mentor_profile = {
-        "id": user.get("id"),
-        "email": display_email,
-        "name": name.strip(),
-        "dept": dept.strip(),
-        "grade": grade.strip(),
-        "field": " · ".join(help_fields),
-        "type": mentor_type,
-        "type_description": TYPE_DESCRIPTIONS[mentor_type],
-        "available_time": available_time,
-        "message": message.strip(),
-        "intro": intro.strip(),
-        "status": "active",
-    }
+    "user_id": user.get("id"),
+    "email": display_email,
+    "name": name.strip(),
+    "dept": dept.strip(),
+    "grade": grade.strip(),
+    "field": " · ".join(help_fields),
+    "type": mentor_type,
+    "type_description": TYPE_DESCRIPTIONS[mentor_type],
+    "available_time": available_time,
+    "message": message.strip(),
+    "intro": intro.strip(),
+    "status": "active",
+}
 
-    # 현재 로그인한 사용자의 멘토 정보 저장
-    st.session_state.mentor_profile = mentor_profile
+try:
+    # Supabase mentor_profiles 테이블에 저장
+    saved_profile = save_mentor_profile(
+        user_id=mentor_profile["user_id"],
+        name=mentor_profile["name"],
+        email=mentor_profile["email"],
+        dept=mentor_profile["dept"],
+        grade=mentor_profile["grade"],
+        field=mentor_profile["field"],
+        mentor_type=mentor_profile["type"],
+        available_time=mentor_profile["available_time"],
+        message=mentor_profile["message"],
+        intro=mentor_profile["intro"],
+    )
 
-    # 전체 멘토 목록에도 저장
-    # 같은 이메일로 이미 등록되어 있으면 기존 정보 제거 후 새 정보로 교체
-    st.session_state.mentor_profiles = [
-        mentor for mentor in st.session_state.mentor_profiles
-        if mentor.get("email") != mentor_profile.get("email")
-    ]
-    st.session_state.mentor_profiles.append(mentor_profile)
+    if not saved_profile:
+        st.error("멘토 정보 저장에 실패했습니다.")
+        st.stop()
+
+    # 화면 표시용으로 type_description 추가
+    saved_profile["type_description"] = TYPE_DESCRIPTIONS.get(
+        saved_profile.get("type"),
+        ""
+    )
+
+    # 현재 화면에서도 바로 보이도록 session_state에 저장
+    st.session_state.mentor_profile = saved_profile
 
     st.success("멘토 등록이 완료되었습니다!")
-    st.info("이제 매칭 결과 페이지에서 후배에게 추천될 수 있어요.")
+    st.info("멘토 정보가 Supabase DB에 저장되었습니다.")
+
+    mentor_profile = saved_profile
+
+except Exception as e:
+    st.error(f"멘토 등록 중 오류가 발생했습니다: {e}")
+    st.stop()
 
     with st.container(border=True):
         st.subheader("등록된 멘토 카드 미리보기")
