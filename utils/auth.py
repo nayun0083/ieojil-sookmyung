@@ -86,7 +86,7 @@ def sign_in(email, password):
             return None, "이메일 또는 비밀번호가 올바르지 않습니다."
 
         # 2. profiles에서 회원정보 가져오기
-        profile = get_profile(user.id)
+        profile = get_profile(user.id, sb=sb)
 
         # 혹시 profiles에 정보가 없으면 metadata로 다시 생성
         if profile is None:
@@ -98,6 +98,7 @@ def sign_in(email, password):
                 name=metadata.get("name", "사용자"),
                 dept=metadata.get("dept", "-"),
                 grade=metadata.get("grade", "-"),
+                sb=sb,
             )
 
         # 3. 로그인한 사용자 정보를 session_state에 저장
