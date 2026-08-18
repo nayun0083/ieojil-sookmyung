@@ -50,7 +50,7 @@ if is_logged_in():
     with st.container(border=True):
         st.write(f"**이름:** {user.get('name', '-')}")
         st.write(f"**이메일:** {user.get('email', '-')}")
-        st.write(f"**학과:** {user.get('dept') or user.get('department') or '-'}")
+        st.write(f"**학과:** {user.get('dept', '-')}")
         st.write(f"**학년:** {user.get('grade', '-')}")
 
     st.write("")
