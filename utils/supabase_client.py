@@ -6,9 +6,19 @@ def get_client() -> Client:
     url = st.secrets["SUPABASE_URL"].strip()
     key = st.secrets["SUPABASE_KEY"].strip()
 
-    # Supabase 화면에서 /rest/v1까지 복사한 경우를 대비해 자동 제거
     url = url.replace("/rest/v1", "")
     url = url.replace("/auth/v1", "")
     url = url.rstrip("/")
 
-    return create_client(url, key)
+    sb = create_client(url, key)
+
+    access_token = st.session_state.get("sb_access_token")
+    refresh_token = st.session_state.get("sb_refresh_token")
+
+    if access_token and refresh_token:
+        try:
+            sb.auth.set_session(access_token, refresh_token)
+        except Exception:
+            pass
+
+    return sb
