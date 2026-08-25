@@ -102,7 +102,21 @@ TIME_OPTIONS = [
     "저녁",
     "상관없음",
 ]
+GRADE_OPTIONS = [1, 2, 3, 4]
 
+
+def parse_grade(value):
+    """
+    기존 값이 1, '1', '1학년' 어떤 형태여도 숫자로 변환
+    """
+    value = str(value).replace("학년", "").strip()
+
+    if value.isdigit():
+        grade_num = int(value)
+        if grade_num in GRADE_OPTIONS:
+            return grade_num
+
+    return 1
 
 # -----------------------------
 # 로그인 사용자 정보
@@ -177,7 +191,9 @@ if current_profile:
 # -----------------------------
 default_name = current_profile.get("name", display_name) if current_profile else display_name
 default_dept = current_profile.get("dept", display_dept) if current_profile else display_dept
-default_grade = str(current_profile.get("grade", display_grade)) if current_profile else str(display_grade)
+default_grade = parse_grade(
+    current_profile.get("grade", display_grade) if current_profile else display_grade
+)
 default_message = current_profile.get("message", "") if current_profile else ""
 default_intro = current_profile.get("intro", "") if current_profile else ""
 
@@ -224,10 +240,11 @@ with st.form("mentor_register_form"):
         )
 
     with col2:
-        grade = st.text_input(
+        grade = st.selectbox(
             "학년",
-            value=default_grade,
-            placeholder="예: 1"
+            GRADE_OPTIONS,
+            index=GRADE_OPTIONS.index(default_grade),
+            format_func=lambda x: f"{x}학년"
         )
 
         email = st.text_input(
@@ -290,12 +307,8 @@ if submitted:
         st.warning("학과를 입력해주세요.")
         st.stop()
 
-    if not grade.strip():
-        st.warning("학년을 입력해주세요.")
-        st.stop()
-
-    if not grade.strip().isdigit():
-        st.warning("학년은 1, 2, 3, 4처럼 숫자로 입력해주세요.")
+    if grade not in GRADE_OPTIONS:
+        st.warning("학년을 선택해주세요.")
         st.stop()
 
     if not help_fields:
@@ -320,7 +333,7 @@ if submitted:
             name=name.strip(),
             email=display_email,
             dept=dept.strip(),
-            grade=int(grade.strip()),
+            grade=grade,
             field=" · ".join(help_fields),
             mentor_type=mentor_type,
             available_time=available_time,
