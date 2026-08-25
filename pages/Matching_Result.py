@@ -48,9 +48,9 @@ answers = st.session_state.get("answers", {})
 if all(key in answers for key in required_questions):
     result = get_matching_result(answers)
 
-    # 같은 결과가 새로고침 때마다 중복 저장되지 않게 방지
     last_saved_answers = st.session_state.get("last_saved_matching_answers")
 
+    # 같은 결과가 새로고침 때마다 중복 저장되지 않게 방지
     if last_saved_answers != answers:
         try:
             save_matching_result(
@@ -66,7 +66,12 @@ if all(key in answers for key in required_questions):
 
 # 2. 새로고침/재로그인해서 session_state에 answers가 없는 경우
 else:
-    latest_result = get_latest_matching_result(user["id"])
+    try:
+        latest_result = get_latest_matching_result(user["id"])
+
+    except Exception as e:
+        st.error(f"저장된 매칭 결과를 불러오는 중 오류가 발생했습니다: {e}")
+        st.stop()
 
     if latest_result is None:
         st.warning("먼저 매칭 테스트를 완료해주세요.")
@@ -76,6 +81,7 @@ else:
             type="primary"
         ):
             st.session_state.q_index = 0
+            st.session_state.force_new_matching_test = True
             st.switch_page("pages/Matching_Test.py")
 
         st.stop()
@@ -90,8 +96,13 @@ else:
             "매칭 테스트 다시 하기",
             type="primary"
         ):
-            st.session_state.answers = {}
+            st.session_state.pop("answers", None)
+            st.session_state.pop("result", None)
+            st.session_state.pop("last_saved_matching_answers", None)
+
             st.session_state.q_index = 0
+            st.session_state.force_new_matching_test = True
+
             st.switch_page("pages/Matching_Test.py")
 
         st.stop()
@@ -99,7 +110,6 @@ else:
     st.session_state.answers = answers
     st.session_state.last_saved_matching_answers = answers.copy()
 
-    # answers를 기반으로 다시 결과 계산
     result = get_matching_result(answers)
 
 
@@ -210,6 +220,7 @@ result_type = result["type"]
 
 try:
     recommended_mentors = get_mentors_by_type(result_type)
+
 except Exception as e:
     st.error(f"추천 멘토를 불러오는 중 오류가 발생했습니다: {e}")
     recommended_mentors = []
@@ -221,6 +232,7 @@ if not recommended_mentors:
     with st.expander("디버깅 정보 확인"):
         try:
             all_mentors = get_active_mentor_profiles()
+
         except Exception as e:
             all_mentors = []
             st.error(f"전체 멘토 조회 오류: {e}")
@@ -365,6 +377,9 @@ if st.button(
     st.session_state.pop("match_request", None)
 
     st.session_state.q_index = 0
+
+    # 이 버튼을 눌렀을 때만 기존 DB 결과가 있어도 새 테스트 시작
+    st.session_state.force_new_matching_test = True
 
     st.switch_page(
         "pages/Matching_Test.py"
