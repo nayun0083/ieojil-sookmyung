@@ -134,6 +134,36 @@ def get_mentor_display_name(match):
 
     return "멘토"
 
+def get_mentor_openchat_link(match):
+    """
+    matches에 저장된 openchat_link가 있으면 사용하고,
+    없으면 mentor_profile_id로 mentor_profiles에서 가져온다.
+    """
+
+    openchat_link = clean_value(
+        match.get("openchat_link"),
+        default=""
+    )
+
+    if openchat_link:
+        return openchat_link
+
+    mentor_profile_id = match.get("mentor_profile_id")
+
+    if mentor_profile_id:
+        try:
+            mentor_profile = get_mentor_profile_by_id(mentor_profile_id)
+
+            if mentor_profile:
+                return clean_value(
+                    mentor_profile.get("openchat_link"),
+                    default=""
+                )
+
+        except Exception:
+            pass
+
+    return ""
 
 def render_application_detail(match, mode="sent"):
     """
@@ -407,11 +437,34 @@ def render_sent_match_card(match):
         elif status == "accepted":
 
             st.success("현재 상태: 매칭 수락 완료")
-
+        
+            openchat_link = clean_value(
+                match.get("openchat_link"),
+                default=""
+            )
+        
+            openchat_password = clean_value(
+                match.get("openchat_password"),
+                default=""
+            )
+        
             if accepted_schedule and accepted_schedule != "-":
                 st.write(f"**확정 일정:** {accepted_schedule}")
-
+        
             st.write("멘토가 매칭 신청을 수락했습니다.")
+        
+            st.divider()
+            st.markdown("#### 💬 오픈채팅방 입장 정보")
+        
+            if openchat_link:
+                st.write(f"**오픈채팅방 링크:** {openchat_link}")
+            else:
+                st.info("아직 오픈채팅방 링크가 등록되지 않았습니다.")
+        
+            if openchat_password:
+                st.write(f"**오픈채팅방 비밀번호:** `{openchat_password}`")
+            else:
+                st.info("아직 오픈채팅방 비밀번호가 전달되지 않았습니다.")
 
 
         elif status == "rejected":
@@ -581,24 +634,9 @@ def render_received_match_card(match):
                     key=f"accept_1_{match_id}",
                     use_container_width=True
                 ):
-
-                    try:
-
-                        update_match_status(
-                            match_id,
-                            "accepted",
-                            accepted_schedule=schedule_1
-                        )
-
-                        st.success("1순위 일정으로 수락했습니다.")
-                        st.rerun()
-
-                    except Exception as e:
-
-                        st.error(
-                            f"수락 처리 중 오류가 발생했습니다: {e}"
-                        )
-
+                    st.session_state.accepting_match_id = match_id
+                    st.session_state.accepting_schedule = schedule_1
+                    st.rerun()
 
             # -----------------------------
             # 2순위로 수락
@@ -611,23 +649,9 @@ def render_received_match_card(match):
                     key=f"accept_2_{match_id}",
                     use_container_width=True
                 ):
-
-                    try:
-
-                        update_match_status(
-                            match_id,
-                            "accepted",
-                            accepted_schedule=schedule_2
-                        )
-
-                        st.success("2순위 일정으로 수락했습니다.")
-                        st.rerun()
-
-                    except Exception as e:
-
-                        st.error(
-                            f"수락 처리 중 오류가 발생했습니다: {e}"
-                        )
+                    st.session_state.accepting_match_id = match_id
+                    st.session_state.accepting_schedule = schedule_2
+                    st.rerun()
 
 
             # -----------------------------
@@ -659,6 +683,80 @@ def render_received_match_card(match):
                         )
 
 
+             if st.session_state.get("accepting_match_id") == match_id:
+
+
+                selected_schedule = st.session_state.get("accepting_schedule", "-")
+                openchat_link = get_mentor_openchat_link(match)
+            
+                st.divider()
+                st.markdown("#### 🔐 오픈채팅방 비밀번호 입력")
+            
+                if openchat_link:
+                    st.write(f"**오픈채팅방 링크:** {openchat_link}")
+                else:
+                    st.warning(
+                        "멘토 등록 정보에 오픈채팅방 링크가 없습니다. "
+                        "멘토 등록 페이지에서 링크를 먼저 입력해주세요."
+                    )
+            
+                with st.form(f"openchat_password_form_{match_id}"):
+            
+                    openchat_password = st.text_input(
+                        "오픈채팅방 비밀번호",
+                        type="password",
+                        placeholder="멘티에게 전달할 오픈채팅방 비밀번호를 입력해주세요."
+                    )
+            
+                    col_ok, col_cancel = st.columns(2)
+            
+                    with col_ok:
+                        submitted_password = st.form_submit_button(
+                            "비밀번호 보내고 수락하기",
+                            type="primary",
+                            use_container_width=True
+                        )
+            
+                    with col_cancel:
+                        cancel_accept = st.form_submit_button(
+                            "취소",
+                            use_container_width=True
+                        )
+            
+                if submitted_password:
+            
+                    if not openchat_link:
+                        st.warning("오픈채팅방 링크를 먼저 등록해주세요.")
+                        st.stop()
+            
+                    if not openchat_password.strip():
+                        st.warning("오픈채팅방 비밀번호를 입력해주세요.")
+                        st.stop()
+            
+                    try:
+                        update_match_status(
+                            match_id,
+                            "accepted",
+                            accepted_schedule=selected_schedule,
+                            openchat_password=openchat_password.strip(),
+                            openchat_link=openchat_link,
+                        )
+            
+                        st.session_state.pop("accepting_match_id", None)
+                        st.session_state.pop("accepting_schedule", None)
+            
+                        st.success("오픈채팅방 비밀번호를 전달하고 매칭을 수락했습니다.")
+                        st.rerun()
+            
+                    except Exception as e:
+                        st.error(f"수락 처리 중 오류가 발생했습니다: {e}")
+            
+                if cancel_accept:
+                    st.session_state.pop("accepting_match_id", None)
+                    st.session_state.pop("accepting_schedule", None)
+                    st.rerun()
+
+
         # =========================================
         # accepted
         # =========================================
@@ -669,6 +767,16 @@ def render_received_match_card(match):
 
             if accepted_schedule and accepted_schedule != "-":
                 st.write(f"**확정 일정:** {accepted_schedule}")
+
+
+            openchat_link = clean_value(match.get("openchat_link"), default="")
+            openchat_password = clean_value(match.get("openchat_password"), default="")
+            
+            if openchat_link:
+                st.write(f"**오픈채팅방 링크:** {openchat_link}")
+            
+            if openchat_password:
+                st.write(f"**전달한 비밀번호:** `{openchat_password}`")
 
 
         # =========================================
