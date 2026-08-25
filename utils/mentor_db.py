@@ -50,14 +50,21 @@ def save_mentor_profile(
 
     # 이미 있으면 update
     if existing.data and len(existing.data) > 0:
-        mentor_profile_id = existing.data[0]["id"]
+        existing_id = existing.data[0].get("id")
 
         res = (
             sb.table("mentor_profiles")
             .update(data)
-            .eq("id", mentor_profile_id)
+            .eq("user_id", user_id)
             .execute()
         )
+
+        # Supabase가 data를 안 돌려줘도 화면에서 쓸 수 있게 fallback 반환
+        if res.data and len(res.data) > 0:
+            return res.data[0]
+
+        data["id"] = existing_id
+        return data
 
     # 없으면 insert
     else:
@@ -67,7 +74,10 @@ def save_mentor_profile(
             .execute()
         )
 
-    return res.data[0] if res.data else None
+        if res.data and len(res.data) > 0:
+            return res.data[0]
+
+        return data
 
 
 def get_mentor_profile_by_user(user_id: str):
