@@ -1,11 +1,17 @@
 import streamlit as st
+
 from components.header import render_header
 from components.footer import render_footer
-from components.cards import mentor_card
 from utils.matching import get_matching_result
 from utils.auth import require_login, get_current_user
+from utils.mentor_db import get_mentors_by_type, get_active_mentor_profiles
 
-st.set_page_config(page_title="매칭 결과 · 이어질 숙명",page_icon="💙",  layout="wide")
+
+st.set_page_config(
+    page_title="매칭 결과 · 이어질 숙명",
+    page_icon="💙",
+    layout="wide"
+)
 
 render_header(active="test")
 require_login()
@@ -18,9 +24,12 @@ if not answers or "q4" not in answers:
         st.switch_page("pages/Matching_Test.py")
     st.stop()
 
+
+# -----------------------------
+# 매칭 결과 계산
+# -----------------------------
 result = get_matching_result(answers)
 st.session_state.result = result
-st.session_state.selected_mentor = result["mentor"]
 
 user = get_current_user()
 
@@ -31,89 +40,146 @@ TYPE_EMOJI = {
     "소통송이": "💬",
 }
 
-emoji = TYPE_EMOJI.get(result["type"], "🌸")
+result_type = result.get("type")
+emoji = TYPE_EMOJI.get(result_type, "🌸")
 
+
+# -----------------------------
+# 결과 화면
+# -----------------------------
 st.markdown(
     f"""
     <div style='text-align:center; padding:24px 0;'>
-        <h1>{emoji} {result['title']}</h1>
+        <h1>{emoji} {result.get('title', '매칭 결과')}</h1>
     </div>
     """,
     unsafe_allow_html=True,
 )
 
 with st.container(border=True):
-    st.markdown(f"### {emoji} {result['type']}")
-    st.write(result["desc"])
+    st.markdown(f"### {emoji} {result_type}")
+    st.write(result.get("desc", ""))
 
 st.divider()
 
+
+# -----------------------------
+# Supabase에서 추천 멘토 불러오기
+# -----------------------------
 st.subheader("👩‍🎓 추천 멘토")
-mentor = result["mentor"]
-mentor_card(mentor)
 
-with st.expander("추천 멘토 프로필 자세히 보기"):
-    st.markdown(f"### {mentor['name']}")
-    st.write(f"**학과:** {mentor['dept']}")
-    st.write(f"**학번:** {mentor['sid']}")
-    st.write(f"**관심 분야:** {mentor['field']}")
-    st.write("---")
-    st.write(
-        "안녕하세요! 후배들의 학교생활과 진로 고민에 도움이 되고 싶은 선배입니다. "
-        "편하게 질문하고 함께 방향을 찾아가요 😊"
-    )
+try:
+    recommended_mentors = get_mentors_by_type(result_type)
+except Exception as e:
+    st.error(f"추천 멘토를 불러오는 중 오류가 발생했습니다: {e}")
+    recommended_mentors = []
+
+
+if not recommended_mentors:
+    st.warning(f"아직 {result_type} 유형에 등록된 멘토가 없어요.")
+
+    with st.expander("디버깅 정보 확인"):
+        try:
+            all_mentors = get_active_mentor_profiles()
+        except Exception as e:
+            all_mentors = []
+            st.error(f"전체 멘토 조회 오류: {e}")
+
+        st.write("현재 매칭 결과 유형:", result_type)
+        st.write("DB에서 불러온 전체 멘토 수:", len(all_mentors))
+        st.write("DB 멘토 목록:", all_mentors)
+
+else:
+    for mentor in recommended_mentors:
+        mentor_id = mentor.get("id")
+        mentor_name = mentor.get("name", "이름 없음")
+
+        with st.container(border=True):
+            st.markdown(f"### 👩‍🎓 {mentor_name}")
+            st.write(f"**학과:** {mentor.get('dept', '-')}")
+            st.write(f"**학년:** {mentor.get('grade', '-')}")
+            st.write(f"**도움 가능 분야:** {mentor.get('field', '-')}")
+            st.write(f"**추천 후배 유형:** {mentor.get('type', '-')}")
+            st.write(f"**가능 시간:** {mentor.get('available_time', '-')}")
+            st.write(f"**한 줄 메시지:** {mentor.get('message', '-')}")
+            st.write(mentor.get("intro", ""))
+
+            with st.expander("추천 멘토 프로필 자세히 보기"):
+                st.markdown(f"### {mentor_name}")
+                st.write(f"**이메일:** {mentor.get('email', '-')}")
+                st.write(f"**학과:** {mentor.get('dept', '-')}")
+                st.write(f"**학년:** {mentor.get('grade', '-')}")
+                st.write(f"**도움 가능 분야:** {mentor.get('field', '-')}")
+                st.write(f"**추천 후배 유형:** {mentor.get('type', '-')}")
+                st.write(f"**가능 시간:** {mentor.get('available_time', '-')}")
+                st.write("---")
+                st.write(mentor.get("intro", ""))
+
+            match_request = st.session_state.get("match_request")
+
+            already_requested = (
+                match_request is not None
+                and match_request.get("mentor", {}).get("id") == mentor_id
+            )
+
+            if already_requested:
+                status = match_request.get("status", "pending")
+
+                if status == "pending":
+                    st.info("이미 이 선배에게 매칭을 신청했어요. 수락을 기다리는 중입니다.")
+                elif status == "accepted":
+                    st.success("이 선배와 매칭이 수락되었어요! 채팅을 시작할 수 있습니다.")
+                else:
+                    st.warning("이 매칭 신청은 처리되었습니다.")
+
+            else:
+                if st.button(
+                    "매칭 신청하기",
+                    type="primary",
+                    use_container_width=True,
+                    key=f"request_{mentor_id}"
+                ):
+                    st.session_state.selected_mentor = mentor
+
+                    st.session_state.match_request = {
+                        "mentor": mentor,
+                        "mentor_profile_id": mentor.get("id"),
+                        "mentor_id": mentor.get("user_id"),
+                        "result_type": result_type,
+                        "status": "pending",
+                        "mentee": {
+                            "id": user.get("id"),
+                            "name": user.get("name", "사용자"),
+                            "email": user.get("email", ""),
+                            "dept": user.get("dept", ""),
+                            "grade": user.get("grade", ""),
+                        },
+                    }
+
+                    st.success(f"{mentor_name}에게 매칭을 신청했어요!")
+                    st.info("알림 페이지에서 신청 상태를 확인할 수 있어요.")
+                    st.balloons()
 
 st.divider()
 
-# 현재 매칭 신청 상태 확인
-match_request = st.session_state.get("match_request")
 
-already_requested = (
-    match_request is not None
-    and match_request.get("mentor", {}).get("name") == mentor["name"]
-)
+# -----------------------------
+# 알림 페이지 이동
+# -----------------------------
+if st.button("알림에서 상태 확인하기", use_container_width=True):
+    st.switch_page("pages/Notifications.py")
 
-c1, c2 = st.columns(2)
-
-with c1:
-    if already_requested:
-        status = match_request.get("status", "pending")
-
-        if status == "pending":
-            st.info("이미 이 선배에게 매칭을 신청했어요. 수락을 기다리는 중입니다.")
-        elif status == "accepted":
-            st.success("이 선배와 매칭이 수락되었어요! 채팅을 시작할 수 있습니다.")
-        else:
-            st.warning("이 매칭 신청은 처리되었습니다.")
-
-    else:
-        if st.button("매칭 신청하기", type="primary", use_container_width=True):
-            st.session_state.match_request = {
-                "mentor": mentor,
-                "result_type": result["type"],
-                "status": "pending",
-                "mentee": {
-                    "id": user.get("id"),
-                    "name": user.get("name", "사용자"),
-                    "email": user.get("email", ""),
-                    "dept": user.get("dept", ""),
-                    "grade": user.get("grade", ""),
-                },
-            }
-
-            st.success(f"{mentor['name']}에게 매칭을 신청했어요!")
-            st.info("알림 페이지에서 신청 상태를 확인할 수 있어요.")
-            st.balloons()
-
-with c2:
-    if st.button("알림에서 상태 확인하기", use_container_width=True):
-        st.switch_page("pages/Notifications.py")
 
 st.divider()
 
+
+# -----------------------------
+# 점수 상세 보기
+# -----------------------------
 with st.expander("유형별 점수 상세 보기"):
     scores = result.get("scores", {})
     for type_name, score in scores.items():
         st.markdown(f"- **{type_name}**: {score}점")
+
 
 render_footer()
