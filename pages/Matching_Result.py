@@ -7,6 +7,7 @@ from pages.algorithm import get_matching_result
 from utils.auth import require_login, get_current_user
 from utils.matching_result_db import save_matching_result, get_latest_matching_result
 from utils.mentor_db import get_mentors_by_type, get_active_mentor_profiles
+from utils.match_db import create_match_request
 
 
 # =========================================
@@ -266,31 +267,39 @@ else:
                 st.write(mentor.get("intro", ""))
 
             if st.button(
-                "매칭 신청하기",
-                type="primary",
-                use_container_width=True,
-                key=f"request_{mentor_id}"
-            ):
-                st.session_state.selected_mentor = mentor
+    "매칭 신청하기",
+    type="primary",
+    use_container_width=True,
+    key=f"request_{mentor_id}"
+):
 
-                st.session_state.match_request = {
-                    "mentor": mentor,
-                    "mentor_profile_id": mentor.get("id"),
-                    "mentor_id": mentor.get("user_id"),
-                    "result_type": result_type,
-                    "status": "pending",
-                    "mentee": {
-                        "id": user.get("id"),
-                        "name": user.get("name", "사용자"),
-                        "email": user.get("email", ""),
-                        "dept": user.get("dept", ""),
-                        "grade": user.get("grade", ""),
-                    },
-                }
+    try:
 
-                st.success(f"{mentor_name}에게 매칭을 신청했어요!")
-                st.info("알림 페이지에서 신청 상태를 확인할 수 있어요.")
-                st.balloons()
+        create_match_request(
+            mentor_id=mentor.get("user_id"),
+            mentee_id=user.get("id"),
+            mentor_profile_id=mentor.get("id"),
+            result_type=result_type,
+            topic=answers.get("q1", ""),
+            preferred_time=answers.get("q5", ""),
+            question=answers.get("q2", ""),
+        )
+
+        st.success(
+            f"{mentor_name}에게 매칭을 신청했어요!"
+        )
+
+        st.info(
+            "알림 페이지에서 신청 상태를 확인할 수 있어요."
+        )
+
+        st.balloons()
+
+    except Exception as e:
+
+        st.error(
+            f"매칭 신청 중 오류가 발생했습니다: {e}"
+        )
 
 
 st.divider()
