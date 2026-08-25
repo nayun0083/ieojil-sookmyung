@@ -1,72 +1,186 @@
 import streamlit as st
-from components.header import render_header
-from components.footer import render_footer
-from utils.auth import require_login
 
-st.set_page_config(page_title="매칭 테스트 · 이어질 숙명", page_icon="💙", layout="wide")
+from pages.algorithm import (
+    SCORING_TABLE,
+    TIME_OPTIONS
+)
 
-render_header(active="test")
-require_login()   # 미로그인 시 여기서 차단 + 로그인 페이지 안내
 
-st.session_state.setdefault("answers", {})
-st.session_state.setdefault("q_index", 0)
+# =========================================
+# 페이지 설정
+# =========================================
 
-# 질문 정의 (한 문항씩 진행)
+st.set_page_config(
+    page_title="매칭 테스트 · 이어질 숙명",
+    page_icon="💙",
+    layout="wide"
+)
+
+
+# =========================================
+# 세션 상태 초기화
+# =========================================
+
+if "answers" not in st.session_state:
+    st.session_state.answers = {}
+
+if "q_index" not in st.session_state:
+    st.session_state.q_index = 0
+
+
+# =========================================
+# 질문 정의
+# =========================================
+
 QUESTIONS = [
-    {"key": "q1", "type": "radio", "q": "Q1. 어떤 도움을 받고 싶나요?",
-     "options": ["학교생활", "전공", "취업", "대외활동"]},
-    {"key": "q1_1", "type": "text", "q": "Q1-1. 현재 가장 고민되는 것은 무엇인가요?",
-     "placeholder": "예: 진로가 고민돼요 / 친구 관계 / 전공 공부 등"},
-    {"key": "q2", "type": "radio", "q": "Q2. 관심 분야는 무엇인가요?",
-     "options": ["AI", "웹개발", "앱개발", "디자인"]},
-    {"key": "q3", "type": "radio", "q": "Q3. 어떤 선배를 만나고 싶나요?",
-     "options": ["친절한", "친구 같은", "경험 많은", "꼼꼼한"]},
-    {"key": "q4", "type": "radio", "q": "Q4. 나의 성향은?",
-     "options": ["도전형", "계획형", "신중형", "사교형"]},
-    {"key": "q5", "type": "radio", "q": "Q5. 멘토링 가능한 시간은?",
-     "options": ["평일", "주말", "저녁", "상관없음"]},
+
+    {
+        "key": "q1",
+        "question": "Q1. 현재 나의 고민(관심사)은?",
+        "options": list(SCORING_TABLE["q1"].keys()),
+    },
+
+    {
+        "key": "q2",
+        "question": "Q2. 어떤 멘토/멘티를 만나고 싶나요?",
+        "options": list(SCORING_TABLE["q2"].keys()),
+    },
+
+    {
+        "key": "q3",
+        "question": "Q3. 나의 성향은?",
+        "options": list(SCORING_TABLE["q3"].keys()),
+    },
+
+    {
+        "key": "q4",
+        "question": "Q4. 나에게 제일 중요한 것은?",
+        "options": list(SCORING_TABLE["q4"].keys()),
+    },
+
+    {
+        "key": "q5",
+        "question": "Q5. 멘토링이 가장 편한 시간은?",
+        "options": TIME_OPTIONS,
+    },
 ]
+
+
+# =========================================
+# 현재 질문
+# =========================================
 
 idx = st.session_state.q_index
 total = len(QUESTIONS)
 
-st.title("매칭 테스트")
-st.progress((idx) / total, text=f"{idx}/{total} 완료")
+
+# =========================================
+# 제목
+# =========================================
+
+st.title("💙 매칭 테스트")
+
+st.write(
+    "각 질문에 가장 가까운 답변을 선택해주세요."
+)
+
+
+# =========================================
+# 진행률
+# =========================================
+
+st.progress(
+    idx / total,
+    text=f"{idx}/{total} 완료"
+)
+
+
+# =========================================
+# 질문 출력
+# =========================================
 
 if idx < total:
+
     q = QUESTIONS[idx]
+
     with st.container(border=True):
-        st.subheader(q["q"])
-        if q["type"] == "radio":
-            ans = st.radio("선택하세요", q["options"], key=f"input_{q['key']}",
-                           label_visibility="collapsed")
+
+        st.subheader(q["question"])
+
+        current_answer = st.session_state.answers.get(
+            q["key"]
+        )
+
+        if current_answer in q["options"]:
+            default_index = q["options"].index(
+                current_answer
+            )
         else:
-            ans = st.text_input("입력하세요", key=f"input_{q['key']}",
-                                placeholder=q.get("placeholder", ""),
-                                label_visibility="collapsed")
+            default_index = None
 
-    col1, col2 = st.columns(2)
-    with col1:
-        if idx > 0 and st.button("⬅ 이전", use_container_width=True):
-            st.session_state.q_index -= 1
-            st.rerun()
-    with col2:
-        label = "결과 보기 " if idx == total - 1 else "다음 ➡"
-        if st.button(label, type="primary", use_container_width=True):
-            if q["type"] == "text" and not ans.strip():
-                st.warning("고민 내용을 입력해주세요.")
+        answer = st.radio(
+            "선택해주세요",
+            q["options"],
+            index=default_index,
+            key=f"input_{q['key']}",
+            label_visibility="collapsed"
+        )
+
+        st.write("")
+
+        col1, col2 = st.columns(2)
+
+        # =====================================
+        # 이전 버튼
+        # =====================================
+
+        with col1:
+
+            if idx > 0:
+
+                if st.button(
+                    "⬅ 이전",
+                    use_container_width=True
+                ):
+
+                    st.session_state.answers[
+                        q["key"]
+                    ] = answer
+
+                    st.session_state.q_index -= 1
+
+                    st.rerun()
+
+
+        # =====================================
+        # 다음 / 결과 버튼
+        # =====================================
+
+        with col2:
+
+            if idx == total - 1:
+                button_text = "결과 보기 🎉"
             else:
-                st.session_state.answers[q["key"]] = ans
-                st.session_state.q_index += 1
-                st.rerun()
-else:
-    st.success("모든 질문에 답했어요! 결과를 확인하세요.")
-    if st.button("결과 보기", type="primary", use_container_width=True):
-        st.switch_page("pages/Matching_Result.py")  # 결과 보기
+                button_text = "다음 ➡"
 
-    if st.button("다시 테스트하기", use_container_width=True):
-        st.session_state.q_index = 0
-        st.session_state.answers = {}
-        st.rerun()
+            if st.button(
+                button_text,
+                type="primary",
+                use_container_width=True
+            ):
 
-render_footer()
+                st.session_state.answers[
+                    q["key"]
+                ] = answer
+
+                if idx == total - 1:
+
+                    st.switch_page(
+                        "pages/Matching_Result.py"
+                    )
+
+                else:
+
+                    st.session_state.q_index += 1
+
+                    st.rerun()
