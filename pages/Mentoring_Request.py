@@ -136,7 +136,7 @@ with st.form("mentoring_request_form"):
     # 타입 A. 전공·학업 / 진로·취업
     # -----------------------------------------
     if is_type_a:
-        st.markdown("### 타입 A. 전공 및 학업 / 진로 및 취업")
+        st.markdown("### 전공·학업 / 진로 관련 신청 내용")
 
         field_options = [
             "AI / 데이터",
@@ -184,7 +184,7 @@ with st.form("mentoring_request_form"):
     # 타입 B. 대학생활 및 인간관계
     # -----------------------------------------
     elif is_type_b:
-        st.markdown("### 타입 B. 대학생활 및 인간관계")
+        st.markdown("### 대학생활 / 인간관계 관련 신청 내용")
 
         campus_options = [
             "동아리/소모임",
@@ -225,7 +225,7 @@ with st.form("mentoring_request_form"):
     # 타입 C. 그냥 친해지고 싶어요
     # -----------------------------------------
     else:
-        st.markdown("### 타입 C. 그냥 친해지고 싶어요")
+        st.markdown("### 친목 / 교류 관련 신청 내용")
 
         interest_options = [
             "#맛집탐방",
@@ -272,9 +272,9 @@ with st.form("mentoring_request_form"):
     mentoring_method = st.radio(
         "희망 멘토링 방식",
         [
-            "☕ 캠퍼스 대면 커피챗",
-            "💻 온라인 화상/음성",
-            "✍️ 비동기 서면 질의응답",
+            "☕ 캠퍼스 대면 커피챗(카페/학교 라운지)",
+            "💻 온라인 화상/음성(Google Meet/디스코드",
+            "✍️ 비동기 서면 질의응답(오픈채팅/문자)",
         ]
     )
 
