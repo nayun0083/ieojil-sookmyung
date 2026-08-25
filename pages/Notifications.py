@@ -194,20 +194,49 @@ def render_application_detail(match, mode="sent"):
     )
 
     mentoring_method = clean_value(
-        match.get("mentoring_method")
+    match.get("mentoring_method")
     )
 
+    if mentoring_method == "-":
+        mentoring_method = extract_application_value(
+            question_text,
+            "희망 방식:"
+        )
+    
+    
     schedule_1 = clean_value(
         match.get("schedule_1")
     )
-
+    
+    if schedule_1 == "-":
+        schedule_1 = extract_application_value(
+            question_text,
+            "1순위:"
+        )
+    
+    
     schedule_2 = clean_value(
         match.get("schedule_2")
     )
-
+    
+    if schedule_2 == "-":
+        schedule_2 = extract_application_value(
+            question_text,
+            "2순위:"
+        )
+    
+    
     schedule_3 = clean_value(
         match.get("schedule_3")
     )
+    
+    if schedule_3 == "-":
+        schedule_3 = extract_application_value(
+            question_text,
+            "3순위:"
+        )
+
+    
 
     st.markdown("### 📄 멘토링 신청서")
 
@@ -306,6 +335,28 @@ def render_sent_match_card(match):
     preferred_time = clean_value(
         match.get("preferred_time")
     )
+    question_text = match.get("question", "")
+
+    mentoring_method = clean_value(
+        match.get("mentoring_method")
+    )
+    
+    if mentoring_method == "-":
+        mentoring_method = extract_application_value(
+            question_text,
+            "희망 방식:"
+        )
+    
+    schedule_1 = clean_value(
+        match.get("schedule_1")
+    )
+    
+    if schedule_1 == "-":
+        schedule_1 = extract_application_value(
+            question_text,
+            "1순위:"
+        )
+    
 
     preferred_field = clean_value(
         match.get("preferred_field")
@@ -314,6 +365,12 @@ def render_sent_match_card(match):
     main_question = clean_value(
         match.get("main_question")
     )
+    
+    if main_question == "-":
+        main_question = extract_application_value(
+            question_text,
+            "핵심 질문 1:"
+        )
 
     accepted_schedule = clean_value(
         match.get("accepted_schedule")
@@ -328,7 +385,8 @@ def render_sent_match_card(match):
         st.write(f"**희망 분야:** {preferred_field}")
         st.write(f"**주제:** {topic}")
         st.write(f"**핵심 질문:** {main_question}")
-        st.write(f"**선호 시간:** {preferred_time}")
+        st.write(f"**희망 방식:** {mentoring_method}")
+        st.write(f"**1순위 일정:** {schedule_1}")
         st.write(f"**추천 유형:** {result_type}")
 
 
@@ -418,22 +476,59 @@ def render_received_match_card(match):
     main_question = clean_value(
         match.get("main_question")
     )
+    
+    if main_question == "-":
+        main_question = extract_application_value(
+            question_text,
+            "핵심 질문 1:"
+        )
+
+    question_text = match.get("question", "")
 
     mentoring_method = clean_value(
         match.get("mentoring_method")
     )
-
+    
+    if mentoring_method == "-":
+        mentoring_method = extract_application_value(
+            question_text,
+            "희망 방식:"
+        )
+    
+    
     schedule_1 = clean_value(
         match.get("schedule_1")
     )
-
+    
+    if schedule_1 == "-":
+        schedule_1 = extract_application_value(
+            question_text,
+            "1순위:"
+        )
+    
+    
     schedule_2 = clean_value(
         match.get("schedule_2")
     )
-
+    
+    if schedule_2 == "-":
+        schedule_2 = extract_application_value(
+            question_text,
+            "2순위:"
+        )
+    
+    
     schedule_3 = clean_value(
         match.get("schedule_3")
     )
+    
+    if schedule_3 == "-":
+        schedule_3 = extract_application_value(
+            question_text,
+            "3순위:"
+        )
+
+    
 
     accepted_schedule = clean_value(
         match.get("accepted_schedule")
