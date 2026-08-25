@@ -683,7 +683,7 @@ def render_received_match_card(match):
                         )
 
 
-             if st.session_state.get("accepting_match_id") == match_id:
+        if st.session_state.get("accepting_match_id") == match_id:
 
 
                 selected_schedule = st.session_state.get("accepting_schedule", "-")
