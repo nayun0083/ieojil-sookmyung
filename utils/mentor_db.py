@@ -39,7 +39,7 @@ def save_mentor_profile(
         "updated_at": datetime.now(timezone.utc).isoformat(),
     }
 
-    # 기존에 등록한 멘토 정보가 있는지 확인
+    # 기존 멘토 정보 확인
     existing = (
         sb.table("mentor_profiles")
         .select("*")
@@ -59,25 +59,49 @@ def save_mentor_profile(
             .execute()
         )
 
-        # Supabase가 data를 안 돌려줘도 화면에서 쓸 수 있게 fallback 반환
+        # Supabase가 수정된 데이터를 돌려주면 그걸 사용
         if res.data and len(res.data) > 0:
             return res.data[0]
 
+        # res.data가 비어 있으면 다시 조회해서 반환
+        updated = (
+            sb.table("mentor_profiles")
+            .select("*")
+            .eq("user_id", user_id)
+            .limit(1)
+            .execute()
+        )
+
+        if updated.data and len(updated.data) > 0:
+            return updated.data[0]
+
+        # 그래도 없으면 화면 표시용 fallback 반환
         data["id"] = existing_id
         return data
 
     # 없으면 insert
-    else:
-        res = (
-            sb.table("mentor_profiles")
-            .insert(data)
-            .execute()
-        )
+    res = (
+        sb.table("mentor_profiles")
+        .insert(data)
+        .execute()
+    )
 
-        if res.data and len(res.data) > 0:
-            return res.data[0]
+    if res.data and len(res.data) > 0:
+        return res.data[0]
 
-        return data
+    # insert 후에도 data가 비어 있으면 다시 조회
+    created = (
+        sb.table("mentor_profiles")
+        .select("*")
+        .eq("user_id", user_id)
+        .limit(1)
+        .execute()
+    )
+
+    if created.data and len(created.data) > 0:
+        return created.data[0]
+
+    return data
 
 
 def get_mentor_profile_by_user(user_id: str):
