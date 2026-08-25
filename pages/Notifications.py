@@ -75,6 +75,93 @@ def get_mentor_display_name(match):
 
     return "멘토"
 
+def extract_application_value(question_text: str, label: str):
+    """
+    question에 저장된 신청서 텍스트에서 특정 항목만 꺼내기
+    예: 핵심 질문 2:, 현재 상황:
+    """
+
+    if not question_text:
+        return "-"
+
+    lines = question_text.split("\n")
+
+    for line in lines:
+        line = line.strip()
+
+        if line.startswith(label):
+            value = line.replace(label, "", 1).strip()
+
+            if value:
+                return value
+
+    return "-"
+
+
+def render_application_detail(match):
+    """
+    멘토링 신청서 전체 내용을 가독성 좋게 보여주는 UI
+    """
+
+    question_text = match.get("question", "")
+
+    mentee_name = match.get("mentee_name", "멘티")
+    mentee_dept = match.get("mentee_dept", "-")
+    mentee_grade = match.get("mentee_grade", "-")
+
+    result_type = match.get("result_type", "-")
+    topic = match.get("topic", "-")
+    preferred_field = match.get("preferred_field", "-")
+
+    main_question = match.get("main_question", "-")
+    question_2 = extract_application_value(question_text, "핵심 질문 2:")
+    background = extract_application_value(question_text, "현재 상황:")
+
+    mentoring_method = match.get("mentoring_method", "-")
+    schedule_1 = match.get("schedule_1", "-")
+    schedule_2 = match.get("schedule_2", "-")
+    schedule_3 = match.get("schedule_3", "-")
+
+    st.markdown("### 📄 멘토링 신청서")
+
+    with st.container(border=True):
+        st.markdown("#### 📌 멘티 정보")
+
+        st.write(f"**이름:** {mentee_name}")
+        st.write(f"**전공 / 학년:** {mentee_dept} / {mentee_grade}")
+        st.write(f"**매칭 유형:** {result_type}")
+
+    with st.container(border=True):
+        st.markdown("#### 🧭 신청 분야")
+
+        st.write(f"**신청 주제:** {topic}")
+        st.write(f"**세부 진로/관심 분야:** {preferred_field}")
+
+    with st.container(border=True):
+        st.markdown("#### ❓ 핵심 질문")
+
+        st.write(f"**질문 1**")
+        st.info(main_question)
+
+        if question_2 and question_2 != "-":
+            st.write(f"**질문 2**")
+            st.info(question_2)
+
+    if background and background != "-":
+        with st.container(border=True):
+            st.markdown("#### 📝 현재 상황")
+
+            st.write(background)
+
+    with st.container(border=True):
+        st.markdown("#### 🗓 멘토링 방식과 희망 일정")
+
+        st.write(f"**희망 방식:** {mentoring_method}")
+        st.write(f"**1순위:** {schedule_1}")
+        st.write(f"**2순위:** {schedule_2}")
+        st.write(f"**3순위:** {schedule_3}")
+
+
 
 # =========================================================
 # 탭
@@ -182,7 +269,7 @@ with tab1:
 
 
                 with st.expander("📄 내가 보낸 멘토링 신청서 보기"):
-                    st.text(match.get("question", "신청서 내용이 없습니다."))
+                    render_application_detail(match)
 
 
         if st.button(
@@ -262,7 +349,7 @@ with tab2:
                 st.write(f"**[현재 상태]** {get_status_text(status)}")
 
                 with st.expander("📄 신청서 전체 내용 보기"):
-                    st.text(match.get("question", "신청서 내용이 없습니다."))
+                    render_application_detail(match)
 
 
                 # =========================================
