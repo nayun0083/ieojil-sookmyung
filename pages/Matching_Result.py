@@ -13,7 +13,6 @@ from utils.mentor_db import (
     get_mentors_by_type,
     get_active_mentor_profiles,
 )
-from utils.match_db import create_match_request
 
 
 # =========================================
@@ -424,10 +423,10 @@ else:
                 )
 
 
-            # =========================================
+           # =========================================
             # 매칭 신청 버튼
             # =========================================
-
+            
             if st.button(
                 "매칭 신청하기",
                 type="primary",
@@ -436,17 +435,8 @@ else:
             ):
                 st.session_state.selected_mentor = mentor
                 st.switch_page("pages/Mentoring_Request.py")
-
-
-
-                except Exception as e:
-
-                    st.error(
-                        f"매칭 신청 중 오류가 발생했습니다: {e}"
-                    )
-
-
-st.divider()
+            
+            st.divider()
 
 
 # =========================================
