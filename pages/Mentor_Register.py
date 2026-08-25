@@ -57,7 +57,6 @@ def load_profile_user(user: dict) -> dict:
             profile.update(res.data[0])
 
     except Exception:
-        # profiles 조회가 실패해도 페이지가 멈추지 않도록 처리
         pass
 
     return profile
@@ -76,15 +75,6 @@ def clean_name(user: dict) -> str:
     return ""
 
 
-user = get_current_user()
-user = load_profile_user(user)
-
-display_name = clean_name(user)
-display_dept = user.get("dept") or user.get("department") or ""
-display_grade = user.get("grade") or ""
-display_email = user.get("email") or ""
-
-
 # -----------------------------
 # 후배 유형 설명
 # -----------------------------
@@ -95,20 +85,56 @@ TYPE_DESCRIPTIONS = {
     "소통송이": "편안한 대화, 고민 상담, 학교생활 조언처럼 공감과 소통이 필요한 후배에게 잘 맞아요.",
 }
 
+HELP_FIELD_OPTIONS = [
+    "학교생활",
+    "수강신청",
+    "전공 공부",
+    "진로 고민",
+    "대외활동",
+    "프로젝트",
+    "개발 공부",
+    "고민 상담",
+]
+
+TIME_OPTIONS = [
+    "평일",
+    "주말",
+    "저녁",
+    "상관없음",
+]
+
+
+# -----------------------------
+# 로그인 사용자 정보
+# -----------------------------
+user = get_current_user()
+user = load_profile_user(user)
+
+if not user or not user.get("id"):
+    st.error("로그인 정보를 불러오지 못했습니다. 다시 로그인해주세요.")
+    st.stop()
+
+display_name = clean_name(user)
+display_dept = user.get("dept") or user.get("department") or ""
+display_grade = user.get("grade") or ""
+display_email = user.get("email") or ""
+
 
 # -----------------------------
 # 세션 초기화
 # -----------------------------
 st.session_state.setdefault("mentor_profile", None)
-st.session_state.setdefault("mentor_profiles", [])
+
 
 # -----------------------------
 # DB에 저장된 기존 멘토 정보 불러오기
 # -----------------------------
 existing_mentor_profile = None
 
-if user.get("id"):
+try:
     existing_mentor_profile = get_mentor_profile_by_user(user["id"])
+except Exception as e:
+    st.warning(f"기존 멘토 정보를 불러오지 못했습니다: {e}")
 
 if existing_mentor_profile:
     existing_mentor_profile["type_description"] = TYPE_DESCRIPTIONS.get(
@@ -116,6 +142,7 @@ if existing_mentor_profile:
         ""
     )
     st.session_state.mentor_profile = existing_mentor_profile
+
 
 # -----------------------------
 # 화면 시작
@@ -129,20 +156,47 @@ st.divider()
 # -----------------------------
 # 이미 등록한 정보 보여주기
 # -----------------------------
-if st.session_state.mentor_profile:
-    st.info("이미 등록된 멘토 정보가 있어요. 아래에서 수정할 수 있습니다.")
+current_profile = st.session_state.get("mentor_profile")
 
-    profile = st.session_state.mentor_profile
+if current_profile:
+    st.info("이미 등록된 멘토 정보가 있어요. 아래에서 수정할 수 있습니다.")
 
     with st.container(border=True):
         st.subheader("현재 등록된 멘토 정보")
-        st.write(f"**이름:** {profile.get('name', '-')}")
-        st.write(f"**학과:** {profile.get('dept', '-')}")
-        st.write(f"**학년:** {profile.get('grade', '-')}")
-        st.write(f"**도움 가능 분야:** {profile.get('field', '-')}")
-        st.write(f"**추천 후배 유형:** {profile.get('type', '-')}")
-        st.write(f"**가능 시간:** {profile.get('available_time', '-')}")
-        st.write(f"**한 줄 메시지:** {profile.get('message', '-')}")
+        st.write(f"**이름:** {current_profile.get('name', '-')}")
+        st.write(f"**학과:** {current_profile.get('dept', '-')}")
+        st.write(f"**학년:** {current_profile.get('grade', '-')}")
+        st.write(f"**도움 가능 분야:** {current_profile.get('field', '-')}")
+        st.write(f"**추천 후배 유형:** {current_profile.get('type', '-')}")
+        st.write(f"**가능 시간:** {current_profile.get('available_time', '-')}")
+        st.write(f"**한 줄 메시지:** {current_profile.get('message', '-')}")
+
+
+# -----------------------------
+# 기존 값 기본 세팅
+# -----------------------------
+default_name = current_profile.get("name", display_name) if current_profile else display_name
+default_dept = current_profile.get("dept", display_dept) if current_profile else display_dept
+default_grade = str(current_profile.get("grade", display_grade)) if current_profile else str(display_grade)
+default_message = current_profile.get("message", "") if current_profile else ""
+default_intro = current_profile.get("intro", "") if current_profile else ""
+
+default_field_text = current_profile.get("field", "") if current_profile else ""
+default_help_fields = [
+    field.strip()
+    for field in default_field_text.split("·")
+    if field.strip() in HELP_FIELD_OPTIONS
+]
+
+mentor_type_options = ["선택해주세요"] + list(TYPE_DESCRIPTIONS.keys())
+
+default_type = current_profile.get("type", "선택해주세요") if current_profile else "선택해주세요"
+if default_type not in mentor_type_options:
+    default_type = "선택해주세요"
+
+default_time = current_profile.get("available_time", "평일") if current_profile else "평일"
+if default_time not in TIME_OPTIONS:
+    default_time = "평일"
 
 
 # -----------------------------
@@ -159,21 +213,21 @@ with st.form("mentor_register_form"):
     with col1:
         name = st.text_input(
             "이름",
-            value=display_name,
+            value=default_name,
             placeholder="예: 김숙명"
         )
 
         dept = st.text_input(
             "학과",
-            value=display_dept,
+            value=default_dept,
             placeholder="예: 데이터사이언스학과"
         )
 
     with col2:
         grade = st.text_input(
             "학년",
-            value=display_grade,
-            placeholder="예: 2학년"
+            value=default_grade,
+            placeholder="예: 1"
         )
 
         email = st.text_input(
@@ -186,52 +240,37 @@ with st.form("mentor_register_form"):
 
     help_fields = st.multiselect(
         "도움 가능 분야",
-        [
-            "학교생활",
-            "수강신청",
-            "전공 공부",
-            "진로 고민",
-            "대외활동",
-            "프로젝트",
-            "개발 공부",
-            "고민 상담",
-        ],
+        HELP_FIELD_OPTIONS,
+        default=default_help_fields,
         help="후배에게 도움을 줄 수 있는 분야를 선택해주세요."
     )
 
-    mentor_type_options = ["선택해주세요"] + list(TYPE_DESCRIPTIONS.keys())
-
     mentor_type = st.selectbox(
         "어떤 유형의 후배와 잘 맞나요?",
-        mentor_type_options
+        mentor_type_options,
+        index=mentor_type_options.index(default_type)
     )
-    
+
     if mentor_type != "선택해주세요":
         with st.container(border=True):
             st.markdown(f"**{mentor_type} 유형 설명**")
             st.write(TYPE_DESCRIPTIONS[mentor_type])
-    
-        with st.container(border=True):
-            st.markdown(f"**{mentor_type} 유형 설명**")
-            st.write(TYPE_DESCRIPTIONS[mentor_type])
-    
-        available_time = st.selectbox(
-            "주로 가능한 시간",
-            [
-                "평일",
-                "주말",
-                "저녁",
-                "상관없음",
-            ]
-        )
+
+    available_time = st.selectbox(
+        "주로 가능한 시간",
+        TIME_OPTIONS,
+        index=TIME_OPTIONS.index(default_time)
+    )
 
     message = st.text_input(
         "한 줄 메시지",
+        value=default_message,
         placeholder="예: 편하게 질문해도 괜찮아요!"
     )
 
     intro = st.text_area(
         "멘토 소개",
+        value=default_intro,
         placeholder="후배들에게 어떤 도움을 줄 수 있는지 간단히 적어주세요.",
         height=140
     )
@@ -255,8 +294,16 @@ if submitted:
         st.warning("학년을 입력해주세요.")
         st.stop()
 
+    if not grade.strip().isdigit():
+        st.warning("학년은 1, 2, 3, 4처럼 숫자로 입력해주세요.")
+        st.stop()
+
     if not help_fields:
         st.warning("도움 가능 분야를 최소 1개 이상 선택해주세요.")
+        st.stop()
+
+    if mentor_type == "선택해주세요":
+        st.warning("추천 후배 유형을 선택해주세요.")
         st.stop()
 
     if not message.strip():
@@ -267,81 +314,61 @@ if submitted:
         st.warning("멘토 소개를 입력해주세요.")
         st.stop()
 
-    if mentor_type == "선택해주세요":
-        st.warning("추천 후배 유형을 선택해주세요.")
+    try:
+        saved_profile = save_mentor_profile(
+            user_id=user["id"],
+            name=name.strip(),
+            email=display_email,
+            dept=dept.strip(),
+            grade=int(grade.strip()),
+            field=" · ".join(help_fields),
+            mentor_type=mentor_type,
+            available_time=available_time,
+            message=message.strip(),
+            intro=intro.strip(),
+        )
+
+        if not saved_profile:
+            st.error("멘토 정보 저장에 실패했습니다.")
+            st.stop()
+
+        saved_profile["type_description"] = TYPE_DESCRIPTIONS.get(
+            saved_profile.get("type"),
+            ""
+        )
+
+        st.session_state.mentor_profile = saved_profile
+
+        st.success("멘토 등록이 완료되었습니다!")
+        st.info("멘토 정보가 Supabase DB에 저장되었습니다.")
+
+    except Exception as e:
+        st.error(f"멘토 등록 중 오류가 발생했습니다: {e}")
         st.stop()
 
-    mentor_profile = {
-    "user_id": user.get("id"),
-    "email": display_email,
-    "name": name.strip(),
-    "dept": dept.strip(),
-    "grade": grade.strip(),
-    "field": " · ".join(help_fields),
-    "type": mentor_type,
-    "type_description": TYPE_DESCRIPTIONS[mentor_type],
-    "available_time": available_time,
-    "message": message.strip(),
-    "intro": intro.strip(),
-    "status": "active",
-}
 
-try:
-    # Supabase mentor_profiles 테이블에 저장
-    saved_profile = save_mentor_profile(
-        user_id=mentor_profile["user_id"],
-        name=mentor_profile["name"],
-        email=mentor_profile["email"],
-        dept=mentor_profile["dept"],
-        grade=mentor_profile["grade"],
-        field=mentor_profile["field"],
-        mentor_type=mentor_profile["type"],
-        available_time=mentor_profile["available_time"],
-        message=mentor_profile["message"],
-        intro=mentor_profile["intro"],
-    )
+# -----------------------------
+# 등록된 멘토 카드 미리보기
+# -----------------------------
+current_mentor_profile = st.session_state.get("mentor_profile")
 
-    if not saved_profile:
-        st.error("멘토 정보 저장에 실패했습니다.")
-        st.stop()
-
-    # 화면 표시용으로 type_description 추가
-    saved_profile["type_description"] = TYPE_DESCRIPTIONS.get(
-        saved_profile.get("type"),
-        ""
-    )
-
-    # 현재 화면에서도 바로 보이도록 session_state에 저장
-    st.session_state.mentor_profile = saved_profile
-
-    st.success("멘토 등록이 완료되었습니다!")
-    st.info("멘토 정보가 Supabase DB에 저장되었습니다.")
-
-    mentor_profile = saved_profile
-
-except Exception as e:
-    st.error(f"멘토 등록 중 오류가 발생했습니다: {e}")
-    st.stop()
-
+if current_mentor_profile:
     with st.container(border=True):
         st.subheader("등록된 멘토 카드 미리보기")
-        st.markdown(f"### 👩‍🎓 {mentor_profile['name']}")
-        st.write(f"**학과:** {mentor_profile['dept']}")
-        st.write(f"**학년:** {mentor_profile['grade']}")
-        st.write(f"**도움 가능 분야:** {mentor_profile['field']}")
-        st.write(f"**추천 후배 유형:** {mentor_profile['type']}")
-        st.caption(mentor_profile["type_description"])
-        st.write(f"**가능 시간:** {mentor_profile['available_time']}")
-        st.write(f"**한 줄 메시지:** {mentor_profile['message']}")
-        st.write(mentor_profile["intro"])
+        st.markdown(f"### 👩‍🎓 {current_mentor_profile.get('name', '-')}")
+        st.write(f"**학과:** {current_mentor_profile.get('dept', '-')}")
+        st.write(f"**학년:** {current_mentor_profile.get('grade', '-')}")
+        st.write(f"**도움 가능 분야:** {current_mentor_profile.get('field', '-')}")
+        st.write(f"**추천 후배 유형:** {current_mentor_profile.get('type', '-')}")
+        st.caption(current_mentor_profile.get("type_description", ""))
+        st.write(f"**가능 시간:** {current_mentor_profile.get('available_time', '-')}")
+        st.write(f"**한 줄 메시지:** {current_mentor_profile.get('message', '-')}")
+        st.write(current_mentor_profile.get("intro", ""))
 
 
 st.divider()
 
-
 if st.button("홈으로 돌아가기", use_container_width=True):
     st.switch_page("app.py")
-
-
 
 render_footer()
