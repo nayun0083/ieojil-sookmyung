@@ -266,40 +266,37 @@ else:
                 st.write("---")
                 st.write(mentor.get("intro", ""))
 
-            if st.button(
-    "매칭 신청하기",
-    type="primary",
-    use_container_width=True,
-    key=f"request_{mentor_id}"
-):
+             if st.button(
+                "매칭 신청하기",
+                type="primary",
+                use_container_width=True,
+                key=f"request_{mentor_id}"
+            ):
+                try:
+                    create_match_request(
+                        mentor_id=mentor.get("user_id"),
+                        mentee_id=user.get("id"),
+                        mentor_profile_id=mentor.get("id"),
+                        result_type=result_type,
+                        topic=answers.get("q1", ""),
+                        preferred_time=answers.get("q5", ""),
+                        question=answers.get("q2", ""),
+                    )
 
-    try:
+                    st.success(
+                        f"{mentor_name}에게 매칭을 신청했어요!"
+                    )
 
-        create_match_request(
-            mentor_id=mentor.get("user_id"),
-            mentee_id=user.get("id"),
-            mentor_profile_id=mentor.get("id"),
-            result_type=result_type,
-            topic=answers.get("q1", ""),
-            preferred_time=answers.get("q5", ""),
-            question=answers.get("q2", ""),
-        )
+                    st.info(
+                        "알림 페이지에서 신청 상태를 확인할 수 있어요."
+                    )
 
-        st.success(
-            f"{mentor_name}에게 매칭을 신청했어요!"
-        )
+                    st.balloons()
 
-        st.info(
-            "알림 페이지에서 신청 상태를 확인할 수 있어요."
-        )
-
-        st.balloons()
-
-    except Exception as e:
-
-        st.error(
-            f"매칭 신청 중 오류가 발생했습니다: {e}"
-        )
+                except Exception as e:
+                    st.error(
+                        f"매칭 신청 중 오류가 발생했습니다: {e}"
+                    )
 
 
 st.divider()
