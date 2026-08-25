@@ -168,22 +168,9 @@ st.divider()
 
 
 # -----------------------------
-# 이미 등록한 정보 보여주기
+# 현재 멘토 정보 가져오기
 # -----------------------------
 current_profile = st.session_state.get("mentor_profile")
-
-if current_profile:
-    st.info("이미 등록된 멘토 정보가 있어요. 아래에서 수정할 수 있습니다.")
-
-    with st.container(border=True):
-        st.subheader("현재 등록된 멘토 정보")
-        st.write(f"**이름:** {current_profile.get('name', '-')}")
-        st.write(f"**학과:** {current_profile.get('dept', '-')}")
-        st.write(f"**학년:** {current_profile.get('grade', '-')}")
-        st.write(f"**도움 가능 분야:** {current_profile.get('field', '-')}")
-        st.write(f"**추천 후배 유형:** {current_profile.get('type', '-')}")
-        st.write(f"**가능 시간:** {current_profile.get('available_time', '-')}")
-        st.write(f"**한 줄 메시지:** {current_profile.get('message', '-')}")
 
 
 # -----------------------------
