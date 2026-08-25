@@ -138,28 +138,10 @@ with st.form("mentoring_request_form"):
     if is_type_a:
         st.markdown("### 전공·학업 / 진로 관련 신청 내용")
 
-        field_options = [
-            "AI / 데이터",
-            "웹·앱 개발",
-            "대학원 진학",
-            "학점 관리·복전",
-            "인턴·취업",
-            "직접 입력",
-        ]
-
-        selected_fields = st.multiselect(
+        preferred_field = st.text_input(
             "세부 진로/관심 분야",
-            field_options,
-            help="해당되는 분야를 선택해주세요."
+            placeholder="예: 전공 세부 분야, 대학원 진학, 학점 관리, 복수전공, 인턴·취업 등"
         )
-
-        custom_field = ""
-
-        if "직접 입력" in selected_fields:
-            custom_field = st.text_input(
-                "직접 입력",
-                placeholder="예: UX 리서치, 보안, PM 등"
-            )
 
         question_1 = st.text_input(
             "핵심 질문 1",
@@ -315,31 +297,35 @@ with st.form("mentoring_request_form"):
 # =========================================
 
 if submitted:
-    if not selected_fields:
-        st.warning("세부 분야 또는 관심사를 최소 1개 이상 선택해주세요.")
-        st.stop()
-
-    if "직접 입력" in selected_fields and not custom_field.strip():
-        st.warning("직접 입력 내용을 작성해주세요.")
-        st.stop()
-
-    if is_type_c and len(selected_fields) > 3:
-        st.warning("관심사 & 취미 키워드는 최대 3개까지 선택해주세요.")
-        st.stop()
-
-    if not question_1.strip():
-        st.warning("필수 질문 또는 대화 주제를 입력해주세요.")
-        st.stop()
-
-    final_fields = [
-        field for field in selected_fields
-        if field != "직접 입력"
-    ]
-
-    if custom_field.strip():
-        final_fields.append(custom_field.strip())
-
-    preferred_field = " · ".join(final_fields)
+    if is_type_a:
+        if not preferred_field.strip():
+            st.warning("세부 진로/관심 분야를 입력해주세요.")
+            st.stop()
+    
+        preferred_field = preferred_field.strip()
+    
+    else:
+        if not selected_fields:
+            st.warning("세부 분야 또는 관심사를 최소 1개 이상 선택해주세요.")
+            st.stop()
+    
+        if "직접 입력" in selected_fields and not custom_field.strip():
+            st.warning("직접 입력 내용을 작성해주세요.")
+            st.stop()
+    
+        if is_type_c and len(selected_fields) > 3:
+            st.warning("관심사 & 취미 키워드는 최대 3개까지 선택해주세요.")
+            st.stop()
+    
+        final_fields = [
+            field for field in selected_fields
+            if field != "직접 입력"
+        ]
+    
+        if custom_field.strip():
+            final_fields.append(custom_field.strip())
+    
+        preferred_field = " · ".join(final_fields)
 
     if date_3 and time_3:
         schedule_text = f"""1순위: {date_1} {time_1}
