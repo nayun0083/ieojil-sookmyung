@@ -216,83 +216,99 @@ if default_time not in TIME_OPTIONS:
 
 
 # -----------------------------
-# 멘토 등록 폼
+# 멘토 등록 / 수정 입력 영역
 # -----------------------------
 st.subheader("멘토 정보 입력")
+st.markdown("#### 기본 정보")
+st.caption("회원가입 때 입력한 정보가 자동으로 들어옵니다. 잘못 보이면 이 화면에서 수정할 수 있어요.")
 
-with st.form("mentor_register_form"):
-    st.markdown("#### 기본 정보")
-    st.caption("회원가입 때 입력한 정보가 자동으로 들어옵니다. 잘못 보이면 이 화면에서 수정할 수 있어요.")
+col1, col2 = st.columns(2)
 
-    col1, col2 = st.columns(2)
-
-    with col1:
-        name = st.text_input(
-            "이름",
-            value=default_name,
-            placeholder="예: 김숙명"
-        )
-
-        dept = st.text_input(
-            "학과",
-            value=default_dept,
-            placeholder="예: 데이터사이언스학과"
-        )
-
-    with col2:
-        grade = st.selectbox(
-            "학년",
-            GRADE_OPTIONS,
-            index=GRADE_OPTIONS.index(default_grade),
-            format_func=lambda x: f"{x}학년"
-        )
-
-        email = st.text_input(
-            "학교 이메일",
-            value=display_email,
-            disabled=True
-        )
-
-    st.markdown("#### 멘토 활동 정보")
-
-    help_fields = st.multiselect(
-        "도움 가능 분야",
-        HELP_FIELD_OPTIONS,
-        default=default_help_fields,
-        help="후배에게 도움을 줄 수 있는 분야를 선택해주세요."
+with col1:
+    name = st.text_input(
+        "이름",
+        value=default_name,
+        placeholder="예: 김숙명"
     )
 
-    mentor_type = st.selectbox(
-        "어떤 유형의 후배와 잘 맞나요?",
-        mentor_type_options,
-        index=mentor_type_options.index(default_type)
+    dept = st.text_input(
+        "학과",
+        value=default_dept,
+        placeholder="예: 데이터사이언스학과"
     )
 
-    if mentor_type != "선택해주세요":
-        with st.container(border=True):
-            st.markdown(f"**{mentor_type} 유형 설명**")
-            st.write(TYPE_DESCRIPTIONS[mentor_type])
-
-    available_time = st.selectbox(
-        "주로 가능한 시간",
-        TIME_OPTIONS,
-        index=TIME_OPTIONS.index(default_time)
+with col2:
+    grade = st.selectbox(
+        "학년",
+        GRADE_OPTIONS,
+        index=GRADE_OPTIONS.index(default_grade),
+        format_func=lambda x: f"{x}학년"
     )
 
-    message = st.text_input(
-        "한 줄 메시지",
-        value=default_message,
-        placeholder="예: 편하게 질문해도 괜찮아요!"
+    email = st.text_input(
+        "학교 이메일",
+        value=display_email,
+        disabled=True
     )
 
-    intro = st.text_area(
-        "멘토 소개",
-        value=default_intro,
-        placeholder="후배들에게 어떤 도움을 줄 수 있는지 간단히 적어주세요.",
-        height=140
-    )
+st.markdown("#### 멘토 활동 정보")
 
-    submitted = st.form_submit_button("멘토 등록하기", type="primary")
+help_fields = st.multiselect(
+    "도움 가능 분야",
+    HELP_FIELD_OPTIONS,
+    default=default_help_fields,
+    help="후배에게 도움을 줄 수 있는 분야를 선택해주세요."
+)
+
+mentor_type = st.selectbox(
+    "어떤 유형의 후배와 잘 맞나요?",
+    mentor_type_options,
+    index=mentor_type_options.index(default_type)
+)
+
+# 유형 설명: form 밖에 있으므로 선택할 때마다 바로 바뀜
+if mentor_type != "선택해주세요":
+    with st.container(border=True):
+        st.markdown(f"**{mentor_type} 유형 설명**")
+        st.write(TYPE_DESCRIPTIONS[mentor_type])
+
+available_time = st.selectbox(
+    "주로 가능한 시간",
+    TIME_OPTIONS,
+    index=TIME_OPTIONS.index(default_time)
+)
+
+message = st.text_input(
+    "한 줄 메시지",
+    value=default_message,
+    placeholder="예: 편하게 질문해도 괜찮아요!"
+)
+
+intro = st.text_area(
+    "멘토 소개",
+    value=default_intro,
+    placeholder="후배들에게 어떤 도움을 줄 수 있는지 간단히 적어주세요.",
+    height=140
+)
+
+
+# -----------------------------
+# 등록 / 수정 버튼
+# -----------------------------
+is_edit_mode = current_profile is not None
+
+if is_edit_mode:
+    submitted = st.button(
+        "멘토 정보 수정하기",
+        type="primary",
+        use_container_width=True
+    )
+else:
+    submitted = st.button(
+        "멘토 등록하기",
+        type="primary",
+        use_container_width=True
+    )
 
 
 # -----------------------------
@@ -352,13 +368,17 @@ if submitted:
 
         st.session_state.mentor_profile = saved_profile
 
-        st.success("멘토 등록이 완료되었습니다!")
+        if is_edit_mode:
+            st.success("멘토 정보가 수정되었습니다!")
+        else:
+            st.success("멘토 등록이 완료되었습니다!")
+
         st.info("멘토 정보가 Supabase DB에 저장되었습니다.")
+        st.rerun()
 
     except Exception as e:
-        st.error(f"멘토 등록 중 오류가 발생했습니다: {e}")
+        st.error(f"멘토 등록/수정 중 오류가 발생했습니다: {e}")
         st.stop()
-
 
 # -----------------------------
 # 등록된 멘토 카드 미리보기
