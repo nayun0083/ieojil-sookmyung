@@ -166,13 +166,13 @@ with st.form("mentoring_request_form"):
 
         preferred_field = st.text_input(
             "세부 진로/관심 분야",
-            placeholder="예: AI/데이터 진로, 웹 개발 공부, 대학원 준비, 학점 관리, 인턴·취업 준비 등"
+            placeholder="예: 전공 세부 분야, 대학원 준비, 학점 관리, 인턴·취업 준비 등"
         )
 
         question_1 = st.text_input(
             "핵심 질문 1",
             max_chars=100,
-            placeholder="예: 2학년 2학기 학부 연구생 진입 시기와 필수 역량이 궁금합니다."
+            placeholder="예: 학부 연구생 진입 시기와 필수 역량이 궁금합니다."
         )
 
         question_2 = st.text_input(
@@ -246,7 +246,6 @@ with st.form("mentoring_request_form"):
             "#게임/e스포츠",
             "#영화/OTT",
             "#여행",
-            "직접 입력",
         ]
 
         selected_fields = st.multiselect(
