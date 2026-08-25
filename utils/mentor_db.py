@@ -29,7 +29,7 @@ def save_mentor_profile(
         "name": name,
         "email": email,
         "dept": dept,
-        "grade": str(grade),
+        "grade": grade,
         "field": field,
         "type": mentor_type,
         "available_time": available_time,
