@@ -1,5 +1,9 @@
 import streamlit as st
 
+from components.header import render_header
+from components.footer import render_footer
+from utils.auth import require_login
+
 from pages.algorithm import (
     SCORING_TABLE,
     TIME_OPTIONS
@@ -11,6 +15,9 @@ st.set_page_config(
     page_icon="💙",
     layout="wide"
 )
+
+render_header(active="test")
+require_login()
 
 
 # =========================================
@@ -78,7 +85,6 @@ idx = st.session_state.q_index
 # =========================================
 
 st.title("💙 매칭 테스트")
-
 st.write("각 질문에 가장 가까운 답변을 선택해주세요.")
 
 
@@ -138,10 +144,7 @@ if idx < total:
                     st.rerun()
 
         with col2:
-            if idx == total - 1:
-                button_text = "결과 보기 🎉"
-            else:
-                button_text = "다음 ➡"
+            button_text = "결과 보기 🎉" if idx == total - 1 else "다음 ➡"
 
             if st.button(
                 button_text,
@@ -155,10 +158,11 @@ if idx < total:
                 st.session_state.answers[q["key"]] = answer
 
                 if idx == total - 1:
-                    # 다음에 다시 테스트할 때 이상한 위치에서 시작하지 않도록 보정
                     st.session_state.q_index = 0
                     st.switch_page("pages/Matching_Result.py")
-
                 else:
                     st.session_state.q_index += 1
                     st.rerun()
+
+
+render_footer()
