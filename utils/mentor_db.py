@@ -124,3 +124,21 @@ def get_mentor_profile_by_id(mentor_profile_id: str):
     )
 
     return res.data[0] if res.data else None
+
+def get_mentors_by_type(result_type: str):
+    """
+    매칭 결과 유형에 맞는 멘토만 조회
+    """
+    sb = get_client()
+
+    res = (
+        sb.table("mentor_profiles")
+        .select("*")
+        .eq("status", "active")
+        .eq("type", result_type)
+        .order("created_at", desc=True)
+        .execute()
+    )
+
+    return res.data or []
+
