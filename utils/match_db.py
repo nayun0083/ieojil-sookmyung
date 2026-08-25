@@ -97,7 +97,13 @@ def get_received_matches(user_id: str):
     return response.data or []
 
 
-def update_match_status(match_id: str, status: str, accepted_schedule: str = ""):
+def update_match_status(
+    match_id: str,
+    status: str,
+    accepted_schedule: str = "",
+    openchat_password: str = "",
+    openchat_link: str = "",
+):
     """
     매칭 신청 상태 변경
 
@@ -117,6 +123,12 @@ def update_match_status(match_id: str, status: str, accepted_schedule: str = "")
 
     if accepted_schedule:
         data["accepted_schedule"] = accepted_schedule
+
+    if openchat_password:
+        data["openchat_password"] = openchat_password
+
+    if openchat_link:
+        data["openchat_link"] = openchat_link
 
     response = (
         sb.table("matches")
