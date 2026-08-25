@@ -2,13 +2,18 @@ import streamlit as st
 
 from components.header import render_header
 from components.footer import render_footer
-from utils.auth import require_login
+from utils.auth import require_login, get_current_user
+from utils.matching_result_db import get_latest_matching_result
 
 from pages.algorithm import (
     SCORING_TABLE,
     TIME_OPTIONS
 )
 
+
+# =========================================
+# 페이지 설정
+# =========================================
 
 st.set_page_config(
     page_title="매칭 테스트 · 이어질 숙명",
@@ -18,6 +23,8 @@ st.set_page_config(
 
 render_header(active="test")
 require_login()
+
+user = get_current_user()
 
 
 # =========================================
@@ -52,6 +59,37 @@ QUESTIONS = [
     },
 ]
 
+required_questions = ["q1", "q2", "q3", "q4", "q5"]
+
+
+# =========================================
+# 기존 결과가 있으면 결과 페이지로 이동
+# 단, 다시 테스트하기 버튼을 누른 경우에는 새 테스트 진행
+# =========================================
+
+force_new_test = st.session_state.get("force_new_matching_test", False)
+answers = st.session_state.get("answers", {})
+
+has_complete_answers = all(
+    key in answers
+    for key in required_questions
+)
+
+# 이미 세션에 완료된 답변이 있으면 결과 페이지로 이동
+if has_complete_answers and not force_new_test:
+    st.switch_page("pages/Matching_Result.py")
+
+# 세션에는 없지만 DB에 저장된 결과가 있으면 결과 페이지로 이동
+if not force_new_test and not has_complete_answers:
+    try:
+        latest_result = get_latest_matching_result(user["id"])
+
+        if latest_result is not None:
+            st.switch_page("pages/Matching_Result.py")
+
+    except Exception as e:
+        st.warning(f"기존 매칭 결과를 불러오는 중 오류가 발생했습니다: {e}")
+
 
 # =========================================
 # 세션 상태 초기화
@@ -85,6 +123,7 @@ idx = st.session_state.q_index
 # =========================================
 
 st.title("💙 매칭 테스트")
+
 st.write("각 질문에 가장 가까운 답변을 선택해주세요.")
 
 
@@ -144,7 +183,10 @@ if idx < total:
                     st.rerun()
 
         with col2:
-            button_text = "결과 보기 🎉" if idx == total - 1 else "다음 ➡"
+            if idx == total - 1:
+                button_text = "결과 보기 🎉"
+            else:
+                button_text = "다음 ➡"
 
             if st.button(
                 button_text,
@@ -159,7 +201,12 @@ if idx < total:
 
                 if idx == total - 1:
                     st.session_state.q_index = 0
+
+                    # 새 테스트 완료 후에는 다시 기존 결과 모드로 전환
+                    st.session_state.force_new_matching_test = False
+
                     st.switch_page("pages/Matching_Result.py")
+
                 else:
                     st.session_state.q_index += 1
                     st.rerun()
