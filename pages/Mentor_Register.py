@@ -278,6 +278,14 @@ intro = st.text_area(
     height=140
 )
 
+openchat_link = st.text_input(
+    "오픈채팅방 링크",
+    value=current_profile.get("openchat_link", "") if current_profile else "",
+    placeholder="예: https://open.kakao.com/o/xxxxxxx",
+    help="멘토링이 수락되면 멘티에게 전달될 오픈채팅방 링크입니다."
+)
+
+
 
 # -----------------------------
 # 등록 / 수정 버튼
@@ -342,6 +350,7 @@ if submitted:
             available_time=available_time,
             message=message.strip(),
             intro=intro.strip(),
+            openchat_link=openchat_link.strip(),
         )
 
         if not saved_profile:
