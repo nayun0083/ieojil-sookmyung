@@ -464,15 +464,17 @@ def render_received_match_card(match):
     result_type = clean_value(
         match.get("result_type")
     )
-
+    
     topic = clean_value(
         match.get("topic")
     )
-
+    
     preferred_field = clean_value(
         match.get("preferred_field")
     )
-
+    
+    question_text = match.get("question", "")
+    
     main_question = clean_value(
         match.get("main_question")
     )
@@ -482,8 +484,6 @@ def render_received_match_card(match):
             question_text,
             "핵심 질문 1:"
         )
-
-    question_text = match.get("question", "")
 
     mentoring_method = clean_value(
         match.get("mentoring_method")
