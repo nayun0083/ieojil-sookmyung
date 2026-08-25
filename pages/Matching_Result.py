@@ -95,43 +95,38 @@ else:
         mentor_name = mentor.get("name", "이름 없음")
 
         with st.container(border=True):
+            # 기본 카드에는 핵심 정보만 보여주기
             st.markdown(f"### 👩‍🎓 {mentor_name}")
             st.write(f"**학과:** {mentor.get('dept', '-')}")
-            st.write(f"**학년:** {mentor.get('grade', '-')}")
-            st.write(f"**도움 가능 분야:** {mentor.get('field', '-')}")
-            st.write(f"**추천 후배 유형:** {mentor.get('type', '-')}")
-            st.write(f"**가능 시간:** {mentor.get('available_time', '-')}")
-            st.write(f"**한 줄 메시지:** {mentor.get('message', '-')}")
-            st.write(mentor.get("intro", ""))
-
+            st.write(f"**학년:** {mentor.get('grade', '-')}학년")
+        
+            # 자세한 정보는 expander 안으로 넣기
             with st.expander("추천 멘토 프로필 자세히 보기"):
-                st.markdown(f"### {mentor_name}")
                 st.write(f"**이메일:** {mentor.get('email', '-')}")
-                st.write(f"**학과:** {mentor.get('dept', '-')}")
-                st.write(f"**학년:** {mentor.get('grade', '-')}")
                 st.write(f"**도움 가능 분야:** {mentor.get('field', '-')}")
                 st.write(f"**추천 후배 유형:** {mentor.get('type', '-')}")
                 st.write(f"**가능 시간:** {mentor.get('available_time', '-')}")
+                st.write(f"**한 줄 메시지:** {mentor.get('message', '-')}")
                 st.write("---")
                 st.write(mentor.get("intro", ""))
-
+        
             match_request = st.session_state.get("match_request")
-
+        
             already_requested = (
                 match_request is not None
                 and match_request.get("mentor", {}).get("id") == mentor_id
             )
-
+        
             if already_requested:
                 status = match_request.get("status", "pending")
-
+        
                 if status == "pending":
                     st.info("이미 이 선배에게 매칭을 신청했어요. 수락을 기다리는 중입니다.")
                 elif status == "accepted":
                     st.success("이 선배와 매칭이 수락되었어요! 채팅을 시작할 수 있습니다.")
                 else:
                     st.warning("이 매칭 신청은 처리되었습니다.")
-
+        
             else:
                 if st.button(
                     "매칭 신청하기",
@@ -140,7 +135,7 @@ else:
                     key=f"request_{mentor_id}"
                 ):
                     st.session_state.selected_mentor = mentor
-
+        
                     st.session_state.match_request = {
                         "mentor": mentor,
                         "mentor_profile_id": mentor.get("id"),
@@ -155,11 +150,10 @@ else:
                             "grade": user.get("grade", ""),
                         },
                     }
-
+        
                     st.success(f"{mentor_name}에게 매칭을 신청했어요!")
                     st.info("알림 페이지에서 신청 상태를 확인할 수 있어요.")
                     st.balloons()
-
 st.divider()
 
 
