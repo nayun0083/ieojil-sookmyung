@@ -3,10 +3,11 @@ from utils.auth import is_logged_in, get_current_user
 
 
 MENU = [
-    ("home", "홈", "app.py"),
-    ("about", "서비스 설명", "pages/About.py"),
-    ("test", "매칭 테스트", "pages/Matching_Test.py"),
-    ("noti", "알림", "pages/Notifications.py"),
+    ("홈", "app.py", "home"),
+    ("서비스 소개", "pages/About.py", "about"),
+    ("매칭 테스트", "pages/Matching_Test.py", "test"),
+    ("멘토 등록", "pages/Mentor_Register.py", "mentor"),
+    ("알림", "pages/Notifications.py", "noti"),
 ]
 
 
