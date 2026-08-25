@@ -102,7 +102,7 @@ st.divider()
 
 
 # ---- 서비스 기능 카드 ----
-a1, a2, a3, a4 = st.columns(4)
+a1, a2, a3 = st.columns(3)
 
 with a1:
     if action_card(
@@ -118,14 +118,8 @@ with a2:
     ):
         go("pages/Mentor_Register.py")
 
-with a3:
-    if action_card(
-        "멘토링 신청",
-        "멘토를 선택하고 멘토링 매칭 신청서를 작성해보세요."
-    ):
-        go("pages/Match_Request.py")
 
-with a4:
+with a3:
     if action_card(
         "서비스 설명 보기",
         "이어질 숙명이 어떤 서비스인지, 어떤 흐름으로 이용하는지 알아보세요."
