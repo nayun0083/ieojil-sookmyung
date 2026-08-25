@@ -437,12 +437,6 @@ else:
                 st.session_state.selected_mentor = mentor
                 st.switch_page("pages/Mentoring_Request.py")
 
-                    st.info(
-                        "알림 페이지에서 신청 상태를 "
-                        "확인할 수 있어요."
-                    )
-
-                    st.balloons()
 
 
                 except Exception as e:
