@@ -1,6 +1,5 @@
 from utils.supabase_client import get_client
 
-
 def create_match_request(
     mentor_id: str,
     mentee_id: str,
@@ -10,10 +9,18 @@ def create_match_request(
     preferred_time: str,
     question: str,
     preferred_field: str = "",
+    mentor_name: str = "",
+    mentee_name: str = "",
+    mentee_dept: str = "",
+    mentee_grade: str = "",
+    main_question: str = "",
+    mentoring_method: str = "",
+    schedule_1: str = "",
+    schedule_2: str = "",
+    schedule_3: str = "",
 ):
     """
     멘티가 멘토에게 멘토링 신청서를 제출한다.
-    matches 테이블에 pending 상태로 저장된다.
     """
 
     sb = get_client()
@@ -26,12 +33,18 @@ def create_match_request(
         "topic": topic,
         "preferred_time": preferred_time,
         "question": question,
+        "preferred_field": preferred_field,
+        "mentor_name": mentor_name,
+        "mentee_name": mentee_name,
+        "mentee_dept": mentee_dept,
+        "mentee_grade": str(mentee_grade),
+        "main_question": main_question,
+        "mentoring_method": mentoring_method,
+        "schedule_1": schedule_1,
+        "schedule_2": schedule_2,
+        "schedule_3": schedule_3,
         "status": "pending",
     }
-
-    # matches 테이블에 preferred_field 컬럼을 추가했다면 저장
-    if preferred_field:
-        data["preferred_field"] = preferred_field
 
     res = (
         sb.table("matches")
@@ -43,6 +56,7 @@ def create_match_request(
         return res.data[0]
 
     return data
+
 
 
 # =========================================================
@@ -83,7 +97,7 @@ def get_received_matches(user_id: str):
     return response.data or []
 
 
-def update_match_status(match_id: str, status: str):
+def update_match_status(match_id: str, status: str, accepted_schedule: str = ""):
     """
     매칭 신청 상태 변경
 
@@ -97,17 +111,21 @@ def update_match_status(match_id: str, status: str):
 
     sb = get_client()
 
+    data = {
+        "status": status
+    }
+
+    if accepted_schedule:
+        data["accepted_schedule"] = accepted_schedule
+
     response = (
         sb.table("matches")
-        .update({
-            "status": status
-        })
+        .update(data)
         .eq("id", match_id)
         .execute()
     )
 
     return response.data or []
-
 
 def save_mentor_reply(match_id: str, mentor_reply: str):
     """
