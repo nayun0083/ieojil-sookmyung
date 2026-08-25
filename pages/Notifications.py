@@ -151,13 +151,6 @@ with tab1:
                         "멘토가 매칭 신청을 수락했습니다."
                     )
 
-                    if st.button(
-                        "채팅 시작하기",
-                        type="primary",
-                        use_container_width=True,
-                        key=f"chat_{match.get('id')}"
-                    ):
-                        st.switch_page("pages/Chat.py")
 
 
                 elif status == "rejected":
