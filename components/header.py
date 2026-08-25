@@ -6,7 +6,6 @@ MENU = [
     ("home", "홈", "app.py"),
     ("about", "서비스 설명", "pages/About.py"),
     ("test", "매칭 테스트", "pages/Matching_Test.py"),
-    ("chat", "채팅", "pages/Chat.py"),
     ("noti", "알림", "pages/Notifications.py"),
 ]
 
