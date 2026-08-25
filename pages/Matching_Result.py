@@ -1,6 +1,8 @@
 import streamlit as st
 
 from pages.algorithm import get_matching_result
+from utils.auth import require_login, get_current_user
+from utils.matching_result_db import save_matching_result, get_latest_matching_result
 
 
 # =========================================
@@ -13,19 +15,12 @@ st.set_page_config(
     layout="wide"
 )
 
-
-# =========================================
-# 답변 가져오기
-# =========================================
-
-answers = st.session_state.get(
-    "answers",
-    {}
-)
+require_login()
+user = get_current_user()
 
 
 # =========================================
-# 테스트 완료 여부 확인
+# 필수 질문
 # =========================================
 
 required_questions = [
@@ -37,34 +32,72 @@ required_questions = [
 ]
 
 
-if not all(
-    key in answers
-    for key in required_questions
-):
-
-    st.warning(
-        "먼저 매칭 테스트를 완료해주세요."
-    )
-
-    if st.button(
-        "매칭 테스트 하러 가기",
-        type="primary"
-    ):
-
-        st.switch_page(
-            "pages/Matching_Test.py"
-        )
-
-    st.stop()
-
-
 # =========================================
-# 유형 계산
+# 답변 가져오기 / DB에서 불러오기 / 저장하기
 # =========================================
 
-result = get_matching_result(
-    answers
-)
+answers = st.session_state.get("answers", {})
+
+# 1. 방금 매칭 테스트를 완료하고 온 경우
+if all(key in answers for key in required_questions):
+    result = get_matching_result(answers)
+
+    # 같은 결과가 새로고침 때마다 중복 저장되지 않게 방지
+    last_saved_answers = st.session_state.get("last_saved_matching_answers")
+
+    if last_saved_answers != answers:
+        try:
+            save_matching_result(
+                mentee_id=user["id"],
+                result=result,
+                answers=answers,
+            )
+
+            st.session_state.last_saved_matching_answers = answers.copy()
+
+        except Exception as e:
+            st.warning(f"매칭 결과 저장 중 오류가 발생했습니다: {e}")
+
+# 2. 새로고침/재로그인해서 session_state에 answers가 없는 경우
+else:
+    latest_result = get_latest_matching_result(user["id"])
+
+    if latest_result is None:
+        st.warning("먼저 매칭 테스트를 완료해주세요.")
+
+        if st.button(
+            "매칭 테스트 하러 가기",
+            type="primary"
+        ):
+            st.session_state.q_index = 0
+            st.switch_page("pages/Matching_Test.py")
+
+        st.stop()
+
+    # DB에 저장된 answers를 다시 session_state에 복구
+    answers = latest_result.get("answers") or {}
+
+    if not all(key in answers for key in required_questions):
+        st.warning("저장된 매칭 결과가 올바르지 않습니다. 매칭 테스트를 다시 진행해주세요.")
+
+        if st.button(
+            "매칭 테스트 다시 하기",
+            type="primary"
+        ):
+            st.session_state.answers = {}
+            st.session_state.q_index = 0
+            st.switch_page("pages/Matching_Test.py")
+
+        st.stop()
+
+    st.session_state.answers = answers
+
+    # answers를 기반으로 다시 결과 계산
+    result = get_matching_result(answers)
+
+
+# 결과 session_state 저장
+st.session_state.result = result
 
 
 # =========================================
@@ -234,7 +267,9 @@ if st.button(
     use_container_width=True
 ):
 
-    st.session_state.answers = {}
+    st.session_state.pop("answers", None)
+    st.session_state.pop("result", None)
+    st.session_state.pop("last_saved_matching_answers", None)
 
     st.session_state.q_index = 0
 
