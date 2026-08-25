@@ -7,6 +7,10 @@ from utils.auth import require_login, get_current_user
 from utils.match_db import create_match_request
 
 
+# =========================================
+# 페이지 설정
+# =========================================
+
 st.set_page_config(
     page_title="멘토링 신청서 · 이어질 숙명",
     page_icon="💙",
@@ -22,6 +26,10 @@ mentor = st.session_state.get("selected_mentor")
 result = st.session_state.get("result", {})
 answers = st.session_state.get("answers", {})
 
+
+# =========================================
+# 멘토 정보 없을 때
+# =========================================
 
 if not mentor:
     st.warning("신청할 멘토 정보가 없습니다. 매칭 결과 페이지에서 멘토를 다시 선택해주세요.")
@@ -42,7 +50,7 @@ communication_style = answers.get("q3", "-")
 core_value = answers.get("q4", "-")
 preferred_time_from_test = answers.get("q5", "상관없음")
 
-result_type = result.get("type", "-")
+result_type = result.get("type", mentor.get("type", "-"))
 
 name = user.get("name", "사용자")
 dept = user.get("dept", user.get("department", "-"))
@@ -56,6 +64,40 @@ if grade_text.isdigit():
 mentor_grade_text = str(mentor.get("grade", "-"))
 if mentor_grade_text.isdigit():
     mentor_grade_text = f"{mentor_grade_text}학년"
+
+
+# =========================================
+# q1 답변에 따른 신청서 분기
+# =========================================
+
+is_major_or_career = (
+    core_worry in [
+        "전공·학업",
+        "진로·취업",
+        "전공 및 학업",
+        "진로 및 취업",
+    ]
+)
+
+is_campus_life = (
+    core_worry in [
+        "대학생활·인간관계",
+        "대학생활 및 인간관계",
+    ]
+)
+
+is_friendship = (
+    "친해지고" in core_worry
+    or "특별한 고민 없음" in core_worry
+)
+
+
+# =========================================
+# 유틸 함수
+# =========================================
+
+def format_schedule(selected_date, selected_time):
+    return f"{selected_date.month}/{selected_date.day} {selected_time.strftime('%H:%M')}"
 
 
 # =========================================
@@ -109,38 +151,22 @@ st.divider()
 
 
 # =========================================
-# 조건부 분기 신청서
+# 멘토링 신청서 작성
 # =========================================
 
 st.subheader("멘토링 세부 정보 입력")
 
-TYPE_A_VALUES = [
-    "전공·학업",
-    "진로·취업",
-    "전공 및 학업",
-    "진로 및 취업",
-]
-
-TYPE_B_VALUES = [
-    "대학생활·인간관계",
-    "대학생활 및 인간관계",
-]
-
-is_type_a = core_worry in TYPE_A_VALUES
-is_type_b = core_worry in TYPE_B_VALUES
-is_type_c = "친해지고" in core_worry or "특별한 고민 없음" in core_worry
-
-
 with st.form("mentoring_request_form"):
+
     # -----------------------------------------
-    # 타입 A. 전공·학업 / 진로·취업
+    # 전공·학업 / 진로·취업
     # -----------------------------------------
-    if is_type_a:
+    if is_major_or_career:
         st.markdown("### 전공·학업 / 진로 관련 신청 내용")
 
         preferred_field = st.text_input(
             "세부 진로/관심 분야",
-            placeholder="예: 전공 세부 분야, 대학원 진학, 학점 관리, 복수전공, 인턴·취업 등"
+            placeholder="예: AI/데이터 진로, 웹 개발 공부, 대학원 준비, 학점 관리, 인턴·취업 준비 등"
         )
 
         question_1 = st.text_input(
@@ -162,10 +188,13 @@ with st.form("mentoring_request_form"):
             height=120
         )
 
+        selected_fields = []
+        custom_field = ""
+
     # -----------------------------------------
-    # 타입 B. 대학생활 및 인간관계
+    # 대학생활·인간관계
     # -----------------------------------------
-    elif is_type_b:
+    elif is_campus_life:
         st.markdown("### 대학생활 / 인간관계 관련 신청 내용")
 
         campus_options = [
@@ -201,10 +230,11 @@ with st.form("mentoring_request_form"):
             height=120
         )
 
+        preferred_field = ""
         custom_field = ""
 
     # -----------------------------------------
-    # 타입 C. 그냥 친해지고 싶어요
+    # 특별한 고민 없음 / 친해지고 싶어요
     # -----------------------------------------
     else:
         st.markdown("### 친목 / 교류 관련 신청 내용")
@@ -242,21 +272,24 @@ with st.form("mentoring_request_form"):
 
         question_2 = ""
         background = ""
+        preferred_field = ""
+
 
     st.divider()
+
 
     # =========================================
     # 공통 영역. 진행 방식 및 일정 조율
     # =========================================
 
-    st.subheader("진행 방식 및 일정 조율")
+    st.subheader("멘토링 방식과 희망 일정")
 
     mentoring_method = st.radio(
         "희망 멘토링 방식",
         [
-            "☕ 캠퍼스 대면 커피챗(카페/학교 라운지)",
-            "💻 온라인 화상/음성(Google Meet/디스코드",
-            "✍️ 비동기 서면 질의응답(오픈채팅/문자)",
+            "☕ 학교에서 만나서 이야기하기",
+            "💻 온라인으로 이야기하기",
+            "✍️ 글로 질문하고 답변받기",
         ]
     )
 
@@ -265,12 +298,26 @@ with st.form("mentoring_request_form"):
     col1, col2 = st.columns(2)
 
     with col1:
-        date_1 = st.date_input("1순위 날짜", value=date.today())
-        date_2 = st.date_input("2순위 날짜", value=date.today())
+        date_1 = st.date_input(
+            "1순위 날짜",
+            value=date.today()
+        )
+
+        date_2 = st.date_input(
+            "2순위 날짜",
+            value=date.today()
+        )
 
     with col2:
-        time_1 = st.time_input("1순위 시간", value=time(18, 0))
-        time_2 = st.time_input("2순위 시간", value=time(19, 0))
+        time_1 = st.time_input(
+            "1순위 시간",
+            value=time(18, 0)
+        )
+
+        time_2 = st.time_input(
+            "2순위 시간",
+            value=time(19, 0)
+        )
 
     weekend_flexible = st.checkbox("3순위: 주말 협의 가능")
 
@@ -278,10 +325,17 @@ with st.form("mentoring_request_form"):
         col3, col4 = st.columns(2)
 
         with col3:
-            date_3 = st.date_input("3순위 날짜", value=date.today())
+            date_3 = st.date_input(
+                "3순위 날짜",
+                value=date.today()
+            )
 
         with col4:
-            time_3 = st.time_input("3순위 시간", value=time(18, 0))
+            time_3 = st.time_input(
+                "3순위 시간",
+                value=time(18, 0)
+            )
+
     else:
         date_3 = None
         time_3 = None
@@ -297,45 +351,67 @@ with st.form("mentoring_request_form"):
 # =========================================
 
 if submitted:
-    if is_type_a:
+
+    # -----------------------------------------
+    # 전공·학업 / 진로·취업 검증
+    # -----------------------------------------
+    if is_major_or_career:
         if not preferred_field.strip():
             st.warning("세부 진로/관심 분야를 입력해주세요.")
             st.stop()
-    
+
         preferred_field = preferred_field.strip()
-    
+
+    # -----------------------------------------
+    # 대학생활 / 친목 검증
+    # -----------------------------------------
     else:
         if not selected_fields:
             st.warning("세부 분야 또는 관심사를 최소 1개 이상 선택해주세요.")
             st.stop()
-    
+
         if "직접 입력" in selected_fields and not custom_field.strip():
             st.warning("직접 입력 내용을 작성해주세요.")
             st.stop()
-    
-        if is_type_c and len(selected_fields) > 3:
+
+        if is_friendship and len(selected_fields) > 3:
             st.warning("관심사 & 취미 키워드는 최대 3개까지 선택해주세요.")
             st.stop()
-    
+
         final_fields = [
             field for field in selected_fields
             if field != "직접 입력"
         ]
-    
+
         if custom_field.strip():
             final_fields.append(custom_field.strip())
-    
+
         preferred_field = " · ".join(final_fields)
 
-    if date_3 and time_3:
-        schedule_text = f"""1순위: {date_1} {time_1}
-2순위: {date_2} {time_2}
-3순위: {date_3} {time_3}"""
-    else:
-        schedule_text = f"""1순위: {date_1} {time_1}
-2순위: {date_2} {time_2}
-3순위: 주말 협의 가능"""
 
+    # -----------------------------------------
+    # 공통 검증
+    # -----------------------------------------
+    if not question_1.strip():
+        st.warning("필수 질문 또는 대화 주제를 입력해주세요.")
+        st.stop()
+
+
+    # -----------------------------------------
+    # 일정 텍스트 만들기
+    # -----------------------------------------
+    schedule_1 = format_schedule(date_1, time_1)
+    schedule_2 = format_schedule(date_2, time_2)
+
+    if weekend_flexible:
+        schedule_3 = "주말 협의 가능"
+    else:
+        schedule_3 = format_schedule(date_3, time_3)
+
+
+    # -----------------------------------------
+    # DB 저장용 텍스트 정리
+    # -----------------------------------------
     topic = f"{core_worry} > {preferred_field}"
 
     full_question = f"""[멘티 프로필 요약]
@@ -349,19 +425,25 @@ if submitted:
 매칭 유형: {result_type}
 
 [멘토링 세부 정보]
-유형: {core_worry}
-세부 분야/관심사: {preferred_field}
+신청 분야: {core_worry}
+세부 진로/관심 분야: {preferred_field}
 핵심 질문 1: {question_1.strip()}
 핵심 질문 2: {question_2.strip() if question_2 else "-"}
 현재 상황: {background.strip() if background else "-"}
 
-[진행 방식 및 일정]
+[멘토링 방식과 희망 일정]
 희망 방식: {mentoring_method}
-{schedule_text}
+1순위: {schedule_1}
+2순위: {schedule_2}
+3순위: {schedule_3}
 """
 
-    preferred_time = f"{mentoring_method} / 1순위: {date_1} {time_1}"
+    preferred_time = f"{mentoring_method} / 1순위: {schedule_1}"
 
+
+    # -----------------------------------------
+    # 신청서 저장
+    # -----------------------------------------
     try:
         saved_request = create_match_request(
             mentor_id=mentor.get("user_id"),
@@ -372,6 +454,16 @@ if submitted:
             preferred_time=preferred_time,
             question=full_question,
             preferred_field=preferred_field,
+
+            mentor_name=mentor.get("name", ""),
+            mentee_name=name,
+            mentee_dept=dept,
+            mentee_grade=grade_text,
+            main_question=question_1.strip(),
+            mentoring_method=mentoring_method,
+            schedule_1=schedule_1,
+            schedule_2=schedule_2,
+            schedule_3=schedule_3,
         )
 
         st.session_state.match_request = saved_request
