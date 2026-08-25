@@ -39,7 +39,7 @@ def render_header(active: str = "home"):
                 )
 
         # 메뉴 버튼
-        for col, (key, label, path) in zip(cols[1:6], MENU):
+        for col, (label, path, key) in zip(cols[1:6], MENU):
             prefix = "🔹 " if key == active else ""
 
             if col.button(
