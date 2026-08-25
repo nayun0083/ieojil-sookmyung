@@ -17,7 +17,7 @@ def sign_up(name, email, password, dept, grade, role=None):
     """
     회원가입
     1. Supabase Auth에 계정 생성
-    2. profiles 테이블에 회원 기본 정보 저장
+    2. profiles 저장은 로그인 성공 후 sign_in에서 처리
 
     role은 예전 코드와 호환하려고 받기만 하고 사용하지 않음
     """
@@ -29,7 +29,6 @@ def sign_up(name, email, password, dept, grade, role=None):
     sb = get_client()
 
     try:
-        # 1. Supabase Auth 회원가입
         res = sb.auth.sign_up({
             "email": email,
             "password": password,
@@ -47,8 +46,7 @@ def sign_up(name, email, password, dept, grade, role=None):
         if user is None:
             return None, "회원가입에 실패했습니다. 다시 시도해주세요."
 
-
-        return profile, None
+        return user, None
 
     except Exception as e:
         msg = str(e)
@@ -63,8 +61,10 @@ def sign_in(email, password):
     """
     로그인
     1. Supabase Auth 로그인
-    2. profiles 테이블에서 내 정보 조회
-    3. session_state.current_user에 저장
+    2. access_token, refresh_token 저장
+    3. profiles 테이블에서 내 정보 조회
+    4. profiles에 정보가 없으면 생성
+    5. session_state.current_user에 저장
     """
     email = email.strip().lower()
 
@@ -74,21 +74,23 @@ def sign_in(email, password):
     sb = get_client()
 
     try:
-        # 1. Supabase Auth 로그인
         res = sb.auth.sign_in_with_password({
             "email": email,
             "password": password,
         })
 
         user = res.user
+        session = res.session
 
         if user is None:
             return None, "이메일 또는 비밀번호가 올바르지 않습니다."
 
-        # 2. profiles에서 회원정보 가져오기
+        if session:
+            st.session_state["sb_access_token"] = session.access_token
+            st.session_state["sb_refresh_token"] = session.refresh_token
+
         profile = get_profile(user.id, sb=sb)
 
-        # 혹시 profiles에 정보가 없으면 metadata로 다시 생성
         if profile is None:
             metadata = user.user_metadata or {}
 
@@ -101,7 +103,6 @@ def sign_in(email, password):
                 sb=sb,
             )
 
-        # 3. 로그인한 사용자 정보를 session_state에 저장
         st.session_state.current_user = profile
 
         return profile, None
@@ -124,7 +125,12 @@ def sign_out():
     except Exception:
         pass
 
-    st.session_state.current_user = None
+    st.session_state.pop("current_user", None)
+    st.session_state.pop("sb_access_token", None)
+    st.session_state.pop("sb_refresh_token", None)
+    st.session_state.pop("mentor_profile", None)
+    st.session_state.pop("selected_mentor", None)
+    st.session_state.pop("match_request", None)
 
 
 def get_current_user():
