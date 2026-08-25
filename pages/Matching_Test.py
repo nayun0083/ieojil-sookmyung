@@ -39,7 +39,7 @@ QUESTIONS = [
     },
     {
         "key": "q2",
-        "question": "Q2. 어떤 멘토/멘티를 만나고 싶나요?",
+        "question": "Q2. 어떤 멘토를 만나고 싶나요?",
         "options": list(SCORING_TABLE["q2"].keys()),
     },
     {
