@@ -5,6 +5,7 @@ from components.footer import render_footer
 from utils.matching import get_matching_result
 from utils.auth import require_login, get_current_user
 from utils.mentor_db import get_mentors_by_type, get_active_mentor_profiles
+from utils.matching_result_db import save_matching_result, get_latest_matching_result
 
 
 st.set_page_config(
@@ -16,21 +17,6 @@ st.set_page_config(
 render_header(active="test")
 require_login()
 
-answers = st.session_state.get("answers", {})
-
-if not answers or "q4" not in answers:
-    st.warning("먼저 매칭 테스트를 완료해주세요.")
-    if st.button("매칭 테스트 하러 가기", type="primary"):
-        st.switch_page("pages/Matching_Test.py")
-    st.stop()
-
-
-# -----------------------------
-# 매칭 결과 계산
-# -----------------------------
-result = get_matching_result(answers)
-st.session_state.result = result
-
 user = get_current_user()
 
 TYPE_EMOJI = {
@@ -39,6 +25,53 @@ TYPE_EMOJI = {
     "탐구송이": "🔍",
     "소통송이": "💬",
 }
+
+
+# -----------------------------
+# 매칭 결과 불러오기 / 저장하기
+# -----------------------------
+answers = st.session_state.get("answers", {})
+
+if answers and "q4" in answers:
+    # 방금 매칭 테스트를 완료하고 넘어온 경우
+    result = get_matching_result(answers)
+
+    # 같은 세션에서 새로고침/버튼 클릭으로 중복 저장되는 것 방지
+    last_saved_answers = st.session_state.get("last_saved_matching_answers")
+
+    if last_saved_answers != answers:
+        try:
+            saved_result = save_matching_result(
+                mentee_id=user["id"],
+                result=result,
+                answers=answers,
+            )
+            st.session_state.latest_matching_result = saved_result
+            st.session_state.last_saved_matching_answers = answers.copy()
+        except Exception as e:
+            st.warning(f"매칭 결과 저장 중 오류가 발생했습니다: {e}")
+
+else:
+    # 새로고침/재로그인 후 들어온 경우 DB에서 최근 결과 불러오기
+    latest_result = get_latest_matching_result(user["id"])
+
+    if latest_result is None:
+        st.warning("먼저 매칭 테스트를 완료해주세요.")
+        if st.button("매칭 테스트 하러 가기", type="primary"):
+            st.switch_page("pages/Matching_Test.py")
+        st.stop()
+
+    result = {
+        "type": latest_result.get("result_type"),
+        "title": latest_result.get("title") or latest_result.get("result_type"),
+        "desc": latest_result.get("description") or "",
+        "scores": latest_result.get("scores") or {},
+    }
+
+    answers = latest_result.get("answers") or {}
+    st.session_state.answers = answers
+
+st.session_state.result = result
 
 result_type = result.get("type")
 emoji = TYPE_EMOJI.get(result_type, "🌸")
@@ -59,6 +92,15 @@ st.markdown(
 with st.container(border=True):
     st.markdown(f"### {emoji} {result_type}")
     st.write(result.get("desc", ""))
+
+# 매칭 테스트 다시 하기 버튼
+if st.button("매칭 테스트 다시 하기", use_container_width=True):
+    st.session_state.pop("answers", None)
+    st.session_state.pop("result", None)
+    st.session_state.pop("selected_mentor", None)
+    st.session_state.pop("match_request", None)
+    st.session_state.pop("last_saved_matching_answers", None)
+    st.switch_page("pages/Matching_Test.py")
 
 st.divider()
 
@@ -94,12 +136,16 @@ else:
         mentor_id = mentor.get("id")
         mentor_name = mentor.get("name", "이름 없음")
 
+        grade_text = str(mentor.get("grade", "-"))
+        if grade_text.isdigit():
+            grade_text = f"{grade_text}학년"
+
         with st.container(border=True):
             # 기본 카드에는 핵심 정보만 보여주기
             st.markdown(f"### 👩‍🎓 {mentor_name}")
             st.write(f"**학과:** {mentor.get('dept', '-')}")
-            st.write(f"**학년:** {mentor.get('grade', '-')}학년")
-        
+            st.write(f"**학년:** {grade_text}")
+
             # 자세한 정보는 expander 안으로 넣기
             with st.expander("추천 멘토 프로필 자세히 보기"):
                 st.write(f"**이메일:** {mentor.get('email', '-')}")
@@ -109,24 +155,24 @@ else:
                 st.write(f"**한 줄 메시지:** {mentor.get('message', '-')}")
                 st.write("---")
                 st.write(mentor.get("intro", ""))
-        
+
             match_request = st.session_state.get("match_request")
-        
+
             already_requested = (
                 match_request is not None
                 and match_request.get("mentor", {}).get("id") == mentor_id
             )
-        
+
             if already_requested:
                 status = match_request.get("status", "pending")
-        
+
                 if status == "pending":
                     st.info("이미 이 선배에게 매칭을 신청했어요. 수락을 기다리는 중입니다.")
                 elif status == "accepted":
                     st.success("이 선배와 매칭이 수락되었어요! 채팅을 시작할 수 있습니다.")
                 else:
                     st.warning("이 매칭 신청은 처리되었습니다.")
-        
+
             else:
                 if st.button(
                     "매칭 신청하기",
@@ -135,7 +181,7 @@ else:
                     key=f"request_{mentor_id}"
                 ):
                     st.session_state.selected_mentor = mentor
-        
+
                     st.session_state.match_request = {
                         "mentor": mentor,
                         "mentor_profile_id": mentor.get("id"),
@@ -150,10 +196,11 @@ else:
                             "grade": user.get("grade", ""),
                         },
                     }
-        
+
                     st.success(f"{mentor_name}에게 매칭을 신청했어요!")
                     st.info("알림 페이지에서 신청 상태를 확인할 수 있어요.")
                     st.balloons()
+
 st.divider()
 
 
