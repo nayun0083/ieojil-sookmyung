@@ -14,6 +14,7 @@ def save_mentor_profile(
     available_time: str,
     message: str,
     intro: str,
+    openchat_link: str = "",
 ):
     """
     멘토 등록 정보 저장 함수
@@ -37,6 +38,7 @@ def save_mentor_profile(
         "intro": intro,
         "status": "active",
         "updated_at": datetime.now(timezone.utc).isoformat(),
+        "openchat_link": openchat_link,
     }
 
     # 기존 멘토 정보 확인
