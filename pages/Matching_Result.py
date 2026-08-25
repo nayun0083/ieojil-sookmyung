@@ -5,8 +5,14 @@ from components.footer import render_footer
 
 from pages.algorithm import get_matching_result
 from utils.auth import require_login, get_current_user
-from utils.matching_result_db import save_matching_result, get_latest_matching_result
-from utils.mentor_db import get_mentors_by_type, get_active_mentor_profiles
+from utils.matching_result_db import (
+    save_matching_result,
+    get_latest_matching_result,
+)
+from utils.mentor_db import (
+    get_mentors_by_type,
+    get_active_mentor_profiles,
+)
 from utils.match_db import create_match_request
 
 
@@ -45,76 +51,136 @@ required_questions = [
 
 answers = st.session_state.get("answers", {})
 
+
 # 1. 방금 매칭 테스트를 완료하고 온 경우
 if all(key in answers for key in required_questions):
+
     result = get_matching_result(answers)
 
-    last_saved_answers = st.session_state.get("last_saved_matching_answers")
+    last_saved_answers = st.session_state.get(
+        "last_saved_matching_answers"
+    )
 
     # 같은 결과가 새로고침 때마다 중복 저장되지 않게 방지
     if last_saved_answers != answers:
+
         try:
+
             save_matching_result(
                 mentee_id=user["id"],
                 result=result,
                 answers=answers,
             )
 
-            st.session_state.last_saved_matching_answers = answers.copy()
+            st.session_state.last_saved_matching_answers = (
+                answers.copy()
+            )
 
         except Exception as e:
-            st.warning(f"매칭 결과 저장 중 오류가 발생했습니다: {e}")
+
+            st.warning(
+                f"매칭 결과 저장 중 오류가 발생했습니다: {e}"
+            )
+
 
 # 2. 새로고침/재로그인해서 session_state에 answers가 없는 경우
 else:
+
     try:
-        latest_result = get_latest_matching_result(user["id"])
+
+        latest_result = get_latest_matching_result(
+            user["id"]
+        )
 
     except Exception as e:
-        st.error(f"저장된 매칭 결과를 불러오는 중 오류가 발생했습니다: {e}")
+
+        st.error(
+            f"저장된 매칭 결과를 불러오는 중 오류가 발생했습니다: {e}"
+        )
+
         st.stop()
 
+
     if latest_result is None:
-        st.warning("먼저 매칭 테스트를 완료해주세요.")
+
+        st.warning(
+            "먼저 매칭 테스트를 완료해주세요."
+        )
 
         if st.button(
             "매칭 테스트 하러 가기",
             type="primary"
         ):
+
             st.session_state.q_index = 0
             st.session_state.force_new_matching_test = True
-            st.switch_page("pages/Matching_Test.py")
+
+            st.switch_page(
+                "pages/Matching_Test.py"
+            )
 
         st.stop()
+
 
     # DB에 저장된 answers를 다시 session_state에 복구
     answers = latest_result.get("answers") or {}
 
-    if not all(key in answers for key in required_questions):
-        st.warning("저장된 매칭 결과가 올바르지 않습니다. 매칭 테스트를 다시 진행해주세요.")
+
+    if not all(
+        key in answers
+        for key in required_questions
+    ):
+
+        st.warning(
+            "저장된 매칭 결과가 올바르지 않습니다. "
+            "매칭 테스트를 다시 진행해주세요."
+        )
 
         if st.button(
             "매칭 테스트 다시 하기",
             type="primary"
         ):
-            st.session_state.pop("answers", None)
-            st.session_state.pop("result", None)
-            st.session_state.pop("last_saved_matching_answers", None)
+
+            st.session_state.pop(
+                "answers",
+                None
+            )
+
+            st.session_state.pop(
+                "result",
+                None
+            )
+
+            st.session_state.pop(
+                "last_saved_matching_answers",
+                None
+            )
 
             st.session_state.q_index = 0
             st.session_state.force_new_matching_test = True
 
-            st.switch_page("pages/Matching_Test.py")
+            st.switch_page(
+                "pages/Matching_Test.py"
+            )
 
         st.stop()
 
+
     st.session_state.answers = answers
-    st.session_state.last_saved_matching_answers = answers.copy()
 
-    result = get_matching_result(answers)
+    st.session_state.last_saved_matching_answers = (
+        answers.copy()
+    )
+
+    result = get_matching_result(
+        answers
+    )
 
 
+# =========================================
 # 결과 session_state 저장
+# =========================================
+
 st.session_state.result = result
 
 
@@ -215,85 +281,203 @@ st.divider()
 # 추천 멘토
 # =========================================
 
-st.subheader("👩‍🎓 추천 멘토")
+st.subheader(
+    "👩‍🎓 추천 멘토"
+)
 
 result_type = result["type"]
 
+
 try:
-    recommended_mentors = get_mentors_by_type(result_type)
+
+    recommended_mentors = get_mentors_by_type(
+        result_type
+    )
 
 except Exception as e:
-    st.error(f"추천 멘토를 불러오는 중 오류가 발생했습니다: {e}")
+
+    st.error(
+        f"추천 멘토를 불러오는 중 오류가 발생했습니다: {e}"
+    )
+
     recommended_mentors = []
 
 
 if not recommended_mentors:
-    st.warning(f"아직 {result_type} 유형에 등록된 멘토가 없어요.")
 
-    with st.expander("디버깅 정보 확인"):
+    st.warning(
+        f"아직 {result_type} 유형에 등록된 멘토가 없어요."
+    )
+
+    with st.expander(
+        "디버깅 정보 확인"
+    ):
+
         try:
+
             all_mentors = get_active_mentor_profiles()
 
         except Exception as e:
-            all_mentors = []
-            st.error(f"전체 멘토 조회 오류: {e}")
 
-        st.write("현재 매칭 결과 유형:", result_type)
-        st.write("DB에서 불러온 전체 멘토 수:", len(all_mentors))
-        st.write("DB 멘토 목록:", all_mentors)
+            all_mentors = []
+
+            st.error(
+                f"전체 멘토 조회 오류: {e}"
+            )
+
+        st.write(
+            "현재 매칭 결과 유형:",
+            result_type
+        )
+
+        st.write(
+            "DB에서 불러온 전체 멘토 수:",
+            len(all_mentors)
+        )
+
+        st.write(
+            "DB 멘토 목록:",
+            all_mentors
+        )
+
 
 else:
-    for mentor in recommended_mentors:
-        mentor_id = mentor.get("id")
-        mentor_name = mentor.get("name", "이름 없음")
 
-        grade_text = str(mentor.get("grade", "-"))
+    for mentor in recommended_mentors:
+
+        mentor_id = mentor.get(
+            "id"
+        )
+
+        mentor_name = mentor.get(
+            "name",
+            "이름 없음"
+        )
+
+        grade_text = str(
+            mentor.get(
+                "grade",
+                "-"
+            )
+        )
 
         if grade_text.isdigit():
-            grade_text = f"{grade_text}학년"
 
-        with st.container(border=True):
-            st.markdown(f"### 👩‍🎓 {mentor_name}")
-            st.write(f"**학과:** {mentor.get('dept', '-')}")
-            st.write(f"**학년:** {grade_text}")
+            grade_text = (
+                f"{grade_text}학년"
+            )
 
-            with st.expander("추천 멘토 프로필 자세히 보기"):
-                st.write(f"**이메일:** {mentor.get('email', '-')}")
-                st.write(f"**도움 가능 분야:** {mentor.get('field', '-')}")
-                st.write(f"**추천 후배 유형:** {mentor.get('type', '-')}")
-                st.write(f"**가능 시간:** {mentor.get('available_time', '-')}")
-                st.write(f"**한 줄 메시지:** {mentor.get('message', '-')}")
+
+        with st.container(
+            border=True
+        ):
+
+            st.markdown(
+                f"### 👩‍🎓 {mentor_name}"
+            )
+
+            st.write(
+                f"**학과:** {mentor.get('dept', '-')}"
+            )
+
+            st.write(
+                f"**학년:** {grade_text}"
+            )
+
+
+            with st.expander(
+                "추천 멘토 프로필 자세히 보기"
+            ):
+
+                st.write(
+                    f"**이메일:** "
+                    f"{mentor.get('email', '-')}"
+                )
+
+                st.write(
+                    f"**도움 가능 분야:** "
+                    f"{mentor.get('field', '-')}"
+                )
+
+                st.write(
+                    f"**추천 후배 유형:** "
+                    f"{mentor.get('type', '-')}"
+                )
+
+                st.write(
+                    f"**가능 시간:** "
+                    f"{mentor.get('available_time', '-')}"
+                )
+
+                st.write(
+                    f"**한 줄 메시지:** "
+                    f"{mentor.get('message', '-')}"
+                )
+
                 st.write("---")
-                st.write(mentor.get("intro", ""))
 
-             if st.button(
+                st.write(
+                    mentor.get(
+                        "intro",
+                        ""
+                    )
+                )
+
+
+            # =========================================
+            # 매칭 신청 버튼
+            # =========================================
+
+            if st.button(
                 "매칭 신청하기",
                 type="primary",
                 use_container_width=True,
                 key=f"request_{mentor_id}"
             ):
+
                 try:
+
                     create_match_request(
-                        mentor_id=mentor.get("user_id"),
-                        mentee_id=user.get("id"),
-                        mentor_profile_id=mentor.get("id"),
+                        mentor_id=mentor.get(
+                            "user_id"
+                        ),
+                        mentee_id=user.get(
+                            "id"
+                        ),
+                        mentor_profile_id=mentor.get(
+                            "id"
+                        ),
                         result_type=result_type,
-                        topic=answers.get("q1", ""),
-                        preferred_time=answers.get("q5", ""),
-                        question=answers.get("q2", ""),
+                        topic=answers.get(
+                            "q1",
+                            ""
+                        ),
+                        preferred_time=answers.get(
+                            "q5",
+                            ""
+                        ),
+                        question=answers.get(
+                            "q2",
+                            ""
+                        ),
                     )
 
+
                     st.success(
-                        f"{mentor_name}에게 매칭을 신청했어요!"
+                        f"{mentor_name}에게 "
+                        "매칭을 신청했어요!"
                     )
 
                     st.info(
-                        "알림 페이지에서 신청 상태를 확인할 수 있어요."
+                        "알림 페이지에서 신청 상태를 "
+                        "확인할 수 있어요."
                     )
 
                     st.balloons()
 
+
                 except Exception as e:
+
                     st.error(
                         f"매칭 신청 중 오류가 발생했습니다: {e}"
                     )
@@ -342,8 +526,11 @@ with st.expander(
             f"#### {question_names[question_key]}"
         )
 
+
         if question_key not in detail_scores:
+
             continue
+
 
         for type_name in [
             "열정송이",
@@ -355,6 +542,7 @@ with st.expander(
             data = detail_scores[
                 question_key
             ][type_name]
+
 
             st.write(
                 f"{type_name}: "
@@ -376,15 +564,35 @@ if st.button(
     use_container_width=True
 ):
 
-    st.session_state.pop("answers", None)
-    st.session_state.pop("result", None)
-    st.session_state.pop("last_saved_matching_answers", None)
-    st.session_state.pop("selected_mentor", None)
-    st.session_state.pop("match_request", None)
+    st.session_state.pop(
+        "answers",
+        None
+    )
+
+    st.session_state.pop(
+        "result",
+        None
+    )
+
+    st.session_state.pop(
+        "last_saved_matching_answers",
+        None
+    )
+
+    st.session_state.pop(
+        "selected_mentor",
+        None
+    )
+
+    st.session_state.pop(
+        "match_request",
+        None
+    )
 
     st.session_state.q_index = 0
 
-    # 이 버튼을 눌렀을 때만 기존 DB 결과가 있어도 새 테스트 시작
+    # 이 버튼을 눌렀을 때만
+    # 기존 DB 결과가 있어도 새 테스트 시작
     st.session_state.force_new_matching_test = True
 
     st.switch_page(
