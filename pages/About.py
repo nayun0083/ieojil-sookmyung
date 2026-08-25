@@ -99,7 +99,7 @@ f1, f2, f3 = st.columns(3)
 
 with f1:
     with st.container(border=True):
-        st.markdown("### 매칭 테스트")
+        st.markdown("### 💙매칭 테스트")
         st.write(
             "간단한 질문을 통해 나의 고민과 성향을 분석하고, "
             "나에게 맞는 송이 유형을 확인할 수 있어요."
@@ -107,7 +107,7 @@ with f1:
 
 with f2:
     with st.container(border=True):
-        st.markdown("### 멘토 등록")
+        st.markdown("### 💙멘토 등록")
         st.write(
             "멘토로 참여하고 싶은 학생은 도움 가능 분야, 추천 후배 유형, "
             "멘토링 가능 시간 등을 등록할 수 있어요."
@@ -115,7 +115,7 @@ with f2:
 
 with f3:
     with st.container(border=True):
-        st.markdown("### 멘토링 신청서")
+        st.markdown("### 💙멘토링 신청서")
         st.write(
             "추천 멘토에게 바로 신청하는 것이 아니라, "
             "궁금한 점과 희망 일정을 담은 신청서를 작성해 보낼 수 있어요."
@@ -127,7 +127,7 @@ f4, f5, f6 = st.columns(3)
 
 with f4:
     with st.container(border=True):
-        st.markdown("### 알림")
+        st.markdown("### 💙알림")
         st.write(
             "멘티는 내가 보낸 신청 현황을 확인하고, "
             "멘토는 받은 신청서를 확인해 수락하거나 거절할 수 있어요."
@@ -135,7 +135,7 @@ with f4:
 
 with f5:
     with st.container(border=True):
-        st.markdown("### 일정 선택")
+        st.markdown("### 💙일정 선택")
         st.write(
             "멘토는 멘티가 제안한 일정 후보 중 가능한 시간을 선택해 "
             "멘토링을 수락할 수 있어요."
@@ -143,7 +143,7 @@ with f5:
 
 with f6:
     with st.container(border=True):
-        st.markdown("### 오픈채팅 연결")
+        st.markdown("### 💙오픈채팅 연결")
         st.write(
             "멘토가 신청을 수락하면 멘티에게 오픈채팅방 링크와 비밀번호가 전달되어 "
             "멘토링을 이어갈 수 있어요."
