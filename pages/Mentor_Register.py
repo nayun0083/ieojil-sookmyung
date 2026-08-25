@@ -393,6 +393,9 @@ if current_mentor_profile:
         st.write(f"**가능 시간:** {current_mentor_profile.get('available_time', '-')}")
         st.write(f"**한 줄 메시지:** {current_mentor_profile.get('message', '-')}")
         st.write(current_mentor_profile.get("intro", ""))
+        st.write(
+            f"**오픈채팅방 링크:** {current_profile.get('openchat_link', '-')}"
+        )
 
 
 st.divider()
